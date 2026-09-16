@@ -46,19 +46,19 @@ export const TeamPage: React.FC = () => {
 
         <div>
           <div style={{ fontSize: '0.6875rem', color: '#38BDF8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>
-            INSTITUTION
+            DEPARTMENT
           </div>
           <div style={{ fontSize: '0.875rem', color: '#E2E8F0' }}>
-            {PROJECT_METADATA.institution}
+            {PROJECT_METADATA.department}
           </div>
         </div>
 
         <div>
           <div style={{ fontSize: '0.6875rem', color: '#38BDF8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>
-            SUPERVISOR
+            MICROSOFT TRAINER & MENTOR
           </div>
           <div style={{ fontSize: '0.875rem', color: '#E2E8F0' }}>
-            {PROJECT_METADATA.supervisor}
+            {PROJECT_METADATA.trainer}
           </div>
         </div>
 

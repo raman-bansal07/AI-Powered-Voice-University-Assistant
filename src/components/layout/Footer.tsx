@@ -192,7 +192,7 @@ export const Footer: React.FC = () => {
               Academic Portal
             </div>
             <p style={{ fontSize: '0.8125rem', color: '#94A3B8', lineHeight: 1.6, marginBottom: '1rem' }}>
-              Senior Capstone Project (2025–2026). Department of Computer Science & Engineering.
+              Senior Capstone Project (2025–2026). Department of Computer Science & Engineering (CSE - AI/ML).
             </p>
             <button
               className="btn btn-secondary btn-sm"

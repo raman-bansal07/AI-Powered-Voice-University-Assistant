@@ -19,10 +19,12 @@ export interface EvaluationCriterion {
 
 export const PROJECT_METADATA = {
   projectTitle: 'Multilingual Voice-Based University Assistant',
-  institution: 'Department of Computer Science & Engineering, School of Technology',
+  institution: 'Department of Computer Science & Engineering (AI & ML)',
+  department: 'Department of Computer Science & Engineering (CSE - AI/ML)',
   academicYear: '2025 – 2026',
   projectType: 'Senior Capstone AI Engineering / Azure Cloud Systems Project',
-  supervisor: 'Prof. (Dr.) A. K. Sharma, Senior Professor & Head of AI Research',
+  supervisor: 'Shreyas Gowda, Microsoft Certified Trainer & Azure AI Specialist',
+  trainer: 'Shreyas Gowda, Microsoft Certified Trainer & Azure AI Specialist',
   cloudPlatform: 'Microsoft Azure (Enterprise Tenant Subscription)',
   targetEvaluatorsCount: 40,
 };
