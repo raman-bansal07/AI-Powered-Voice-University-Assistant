@@ -69,6 +69,92 @@
   --font-mono: 'JetBrains Mono', Consolas, monospace;
 }
 
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 120, 212, 0.25), 0 0 0 0 rgba(0, 120, 212, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(0, 120, 212, 0.5), 0 0 0 8px rgba(0, 120, 212, 0.1);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes floatOrb {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(3deg);
+  }
+}
+
+@keyframes soundWave {
+  0%, 100% {
+    height: 4px;
+    opacity: 0.3;
+  }
+  50% {
+    height: 28px;
+    opacity: 1;
+  }
+}
+
+@keyframes shimmerText {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: floatOrb 3.5s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: pulseGlow 2.2s ease-in-out infinite;
+}
+
+/* Staggered card transitions */
+.card-stagger:nth-child(1) { animation: fadeInUp 0.35s 0.05s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.card-stagger:nth-child(2) { animation: fadeInUp 0.35s 0.12s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.card-stagger:nth-child(3) { animation: fadeInUp 0.35s 0.19s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.card-stagger:nth-child(4) { animation: fadeInUp 0.35s 0.26s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.card-stagger:nth-child(5) { animation: fadeInUp 0.35s 0.33s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+.card-stagger:nth-child(6) { animation: fadeInUp 0.35s 0.40s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+
+/* Enhanced hover micro-interactions */
+.card-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  border-color: #93C5FD !important;
+  box-shadow: 0 12px 24px -4px rgba(0, 120, 212, 0.12), 0 4px 8px -2px rgba(15, 23, 42, 0.04) !important;
+}
+
 /* Base Resets */
 *, *::before, *::after {
   box-sizing: border-box;

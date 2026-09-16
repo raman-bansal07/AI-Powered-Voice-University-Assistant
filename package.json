@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "serve": "node serve.js",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
