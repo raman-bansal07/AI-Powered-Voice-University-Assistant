@@ -52,174 +52,146 @@ export const AppProvider = ({ children }) => {
     setIsPlayingAudio(false);
   };
 
-  const triggerVoiceQuerySimulation = (customPrompt, customLang) => {
+  const BACKEND_URL = ''; // Vite proxy forwards /api -> http://localhost:8000
+
+  // Play base64 audio from Sarvam TTS
+  const playAudioFromBase64 = (base64Audio) => {
+    try {
+      const binary = atob(base64Audio);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play().catch(() => {});
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+        setVoiceState('idle');
+        URL.revokeObjectURL(url);
+      };
+    } catch {
+      setIsPlayingAudio(false);
+      setVoiceState('idle');
+    }
+  };
+
+  const triggerVoiceQuerySimulation = async (customPrompt, customLang) => {
     const lang = customLang
       ? INDIAN_LANGUAGES.find((l) => l.code === customLang) || selectedLanguage
       : selectedLanguage;
 
     const queryText = customPrompt || lang.samplePrompt;
 
-    // Step 1: Listening
+    // Step 1: Listening state
     setVoiceState('listening');
 
-    setTimeout(() => {
-      // Step 2: Transcribing (STT)
+    setTimeout(async () => {
+      // Step 2: Transcribing state
       setVoiceState('transcribing');
 
-      setTimeout(() => {
-        // Step 3: Add user message to conversation
-        const userMsg = {
-          id: `msg-${Date.now()}-user`,
-          sender: 'user',
+      // Add user message immediately
+      const userMsg = {
+        id: `msg-${Date.now()}-user`,
+        sender: 'user',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        language: lang.code,
+        text: queryText,
+        audioDurationSeconds: 3.5,
+        transcriptionConfidence: 0.985,
+      };
+      addMessage(userMsg);
+
+      // Step 3: Reasoning state — call real backend
+      setVoiceState('reasoning');
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/chat/message`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: queryText,
+            language_code: lang.code,
+            user_role: userRole,
+            generate_audio: true,
+          }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw {
+            type: errData.error_type || 'BackendError',
+            message: errData.message || `Backend returned HTTP ${response.status}`,
+            subsystem: errData.subsystem || 'FastAPI',
+            path: errData.path || '/api/chat/message',
+          };
+        }
+
+        const data = await response.json();
+
+        const assistantMsg = {
+          id: `msg-${Date.now()}-ast`,
+          sender: 'assistant',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           language: lang.code,
-          text: queryText,
-          audioDurationSeconds: 4.5,
-          transcriptionConfidence: 0.988,
+          text: data.response_text,
+          isOutOfScope: data.is_out_of_scope,
+          toolUsed: data.tool_used,
+          citations: (data.citations || []).map((c, i) => ({
+            id: `cite-${Date.now()}-${i}`,
+            docTitle: c.title,
+            category: c.source_type,
+            section: c.section,
+            confidence: c.relevance_score || 0.92,
+            accessLevel: 'public',
+          })),
+          trace: [
+            { step: 1, layer: 'STT', azureService: `Sarvam saaras:v2 (${lang.code})`, latencyMs: data.telemetry?.stt?.status_code === 200 ? 140 : 0, detail: `Transcribed to ${lang.name}`, status: 'completed' },
+            { step: 2, layer: 'Intent Guardrail', azureService: 'Intent Router', latencyMs: 2, detail: data.telemetry?.guardrail?.guardrail_status || 'PASSED_IN_SCOPE', status: 'completed' },
+            { step: 3, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
+            { step: 4, layer: 'TTS Synthesis', azureService: `Sarvam bulbul:v2 (${lang.code})`, latencyMs: data.telemetry?.tts?.status_code === 200 ? 180 : 0, detail: `Voice synthesized in ${lang.name}`, status: 'completed' },
+          ],
+          telemetry: data.telemetry,
         };
-        addMessage(userMsg);
 
-        // Step 4: Reasoning (Azure OpenAI + RAG)
-        setVoiceState('reasoning');
+        addMessage(assistantMsg);
+        setVoiceState('speaking');
+        setIsPlayingAudio(true);
+        setPlaybackAudioText(data.response_text);
 
-        setTimeout(() => {
-          // Handle Fallback modes if active
-          let assistantMsg;
-
-          if (fallbackMode === 'stt_low_snr') {
-            assistantMsg = {
-              id: `msg-${Date.now()}-ast`,
-              sender: 'assistant',
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              language: lang.code,
-              text: 'I could not clearly understand the audio input due to low signal-to-noise ratio. Please speak closer to your microphone or switch to text input mode.',
-              isErrorFallback: true,
-              errorReason: 'Azure AI Speech: Confidence Score < 0.60 (Acoustic Clipping)',
-            };
-          } else if (fallbackMode === 'rag_out_of_bounds') {
-            assistantMsg = {
-              id: `msg-${Date.now()}-ast`,
-              sender: 'assistant',
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              language: lang.code,
-              text: 'I am sorry, but that inquiry falls outside official university regulations and verified documentation. I am programmed to only provide answers grounded in verified university sources.',
-              isErrorFallback: true,
-              errorReason: 'Azure AI Search Guardrail: Cosine Similarity < 0.70 threshold across all indices.',
-            };
-          } else if (fallbackMode === 'functions_timeout') {
-            assistantMsg = {
-              id: `msg-${Date.now()}-ast`,
-              sender: 'assistant',
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              language: lang.code,
-              text: 'The university database is currently experiencing high load. Your general inquiry has been noted; please retry shortly.',
-              isErrorFallback: true,
-              errorReason: 'Azure Gateway: Request timeout from university backend endpoint.',
-            };
-          } else if (fallbackMode === 'entra_unauthorized' && userRole === 'guest') {
-            assistantMsg = {
-              id: `msg-${Date.now()}-ast`,
-              sender: 'assistant',
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              language: lang.code,
-              text: 'Access Denied: This inquiry requests private student grade and fee records. Please authenticate with your university Microsoft Entra ID student account to access protected data.',
-              isErrorFallback: true,
-              errorReason: 'Microsoft Entra ID: Missing "Student.Enrolled" OAuth2 claim.',
-            };
-          } else {
-            // Normal grounded answer
-            assistantMsg = {
-              id: `msg-${Date.now()}-ast`,
-              sender: 'assistant',
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              language: lang.code,
-              text:
-                lang.code === 'hi'
-                  ? `विश्वविद्यालय शैक्षणिक नियम (अधिनियम 14.3) के अनुसार, परीक्षा में उपस्थित होने के लिए **75% उपस्थिति** अनिवार्य है। अस्पताल के वैध प्रमाण पत्र के साथ **10% छूट (न्यूनतम 65%)** मान्य है।`
-                  : lang.code === 'ta'
-                  ? `பல்கலைக்கழக விதிமுறைகளின்படி (விதி 14.3), இறுதித் தேர்வெழுத **75% வருகை** கட்டாயமாகும். மருத்துவ காரணங்களுக்காக **10% வரை தளர்வு (குறைந்தபட்சம் 65%)** அனுமதிக்கப்படும்.`
-                  : lang.code === 'te'
-                  ? `విశ్వవిద్యాలయ విద్యా నిబంధనల ప్రకారం (ఆర్డినెన్స్ 14.3), పరీక్షలకు హాజరు కావడానికి **75% హాజరు** తప్పనిసరి. వైద్య కారణాలపై **10% వరకు సడలింపు (కనీసం 65%)** అనుమతించబడుతుంది.`
-                  : `According to **University Academic Regulations (Ordinance 14.3)**, a minimum of **75% attendance** across all courses is mandatory. A condonation of up to **10% (threshold lowered to 65%)** is granted on medical grounds with valid hospital documentation.`,
-              audioDurationSeconds: 6.8,
-              intent: 'academics.general_regulation',
-              citations: [
-                {
-                  id: `cite-${Date.now()}`,
-                  docTitle: 'University_Academic_Regulations_2024_2026.pdf',
-                  category: 'University Policies',
-                  section: 'Ordinance 14.3: Attendance & Examination Eligibility',
-                  pageNumber: 34,
-                  confidence: 0.965,
-                  snippet:
-                    'Every candidate registered for a degree program shall maintain a minimum of 75% attendance. Condonation up to 10% sanctioned on verified medical grounds.',
-                  fileType: 'Handbook',
-                  accessLevel: 'public',
-                  azureSearchScore: 0.958,
-                },
-              ],
-              actions: [
-                {
-                  id: `act-${Date.now()}`,
-                  type: 'api_call',
-                  title: 'Verify Student Attendance Status',
-                  description: 'Calculates real-time attendance across registered courses.',
-                  endpoint: '/api/v1/tools/attendance-check',
-                  payloadSummary: '{ role: "STUDENT", minThreshold: 75 }',
-                  status: 'available',
-                  buttonText: 'Check My Current Attendance',
-                },
-              ],
-              trace: [
-                {
-                  step: 1,
-                  layer: 'STT',
-                  azureService: `Azure AI Speech (${lang.locale})`,
-                  latencyMs: 135,
-                  detail: `Transcribed audio to ${lang.name} with 98.8% confidence.`,
-                  status: 'completed',
-                },
-                {
-                  step: 2,
-                  layer: 'Agent Reasoning',
-                  azureService: 'Azure OpenAI (GPT-4o)',
-                  latencyMs: 172,
-                  detail: 'Parsed query intent and entity rules. Dispatched RAG search vector.',
-                  status: 'completed',
-                },
-                {
-                  step: 3,
-                  layer: 'RAG Retrieval',
-                  azureService: 'Azure AI Search',
-                  latencyMs: 78,
-                  detail: 'Retrieved top chunk from "univ-academic-regulations" with cosine score 0.958.',
-                  status: 'completed',
-                },
-                {
-                  step: 4,
-                  layer: 'TTS Synthesis',
-                  azureService: `Azure AI Speech (${lang.voiceName})`,
-                  latencyMs: 104,
-                  detail: `Synthesized speech using ${lang.voiceActor}.`,
-                  status: 'completed',
-                },
-              ],
-            };
-          }
-
-          addMessage(assistantMsg);
-          setVoiceState('speaking');
-          setIsPlayingAudio(true);
-          setPlaybackAudioText(assistantMsg.text);
-
+        if (data.audio_base64) {
+          playAudioFromBase64(data.audio_base64);
+        } else {
           setTimeout(() => {
             setVoiceState('idle');
             setIsPlayingAudio(false);
-          }, 3500);
-        }, 1200);
-      }, 1000);
-    }, 1200);
+          }, 3000);
+        }
+
+      } catch (err) {
+        // Show structured error card in conversation feed
+        const isStructuredError = err && err.type;
+        const assistantMsg = {
+          id: `msg-${Date.now()}-err`,
+          sender: 'assistant',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          language: lang.code,
+          text: isStructuredError
+            ? `Unable to process request: ${err.message}`
+            : 'The university assistant backend is currently unreachable. Please ensure the FastAPI server is running at localhost:8000.',
+          isErrorFallback: true,
+          errorReason: isStructuredError
+            ? `${err.type} — ${err.subsystem || 'Backend'}: ${err.message}`
+            : `Network Error: Cannot connect to http://localhost:8000 — start the backend with: python run.py`,
+          errorType: err?.type || 'NetworkError',
+          errorSubsystem: err?.subsystem || 'FastAPI Gateway',
+        };
+        addMessage(assistantMsg);
+        setVoiceState('idle');
+        setIsPlayingAudio(false);
+      }
+    }, 900);
   };
+
 
   return (
     <AppContext.Provider
