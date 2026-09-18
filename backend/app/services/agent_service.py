@@ -7,7 +7,8 @@ import time
 import logging
 from typing import Dict, Any, Optional
 from app.config import settings
-from app.services.intent_guardrail import check_intent_guardrail
+from app.services.intent_guardrail import GUARDRAIL_RESPONSES
+from app.services.llm_router import route_query_with_llm
 from app.services.rag_service import search_university_ordinances
 from app.services.sarvam_service import synthesize_speech_sarvam
 from app.tools.university_tools import (
@@ -27,21 +28,29 @@ async def process_user_query(
 ) -> Dict[str, Any]:
     """
     Full pipeline processing:
-    1. Intent Guardrail Check (Filters off-topic queries immediately)
-    2. Intent & Tool Routing (Dynamic Tools vs RAG Ordinances)
-    3. Tool / RAG Execution
-    4. Multilingual Response Formulation
-    5. Spoken Voice Synthesis (TTS)
+    1. LLM Intent & Tool Routing (Dynamic LLM Call)
+    2. Tool / RAG Execution
+    3. Multilingual Response Formulation
+    4. Spoken Voice Synthesis (TTS)
     """
     start_time = time.time()
     q_lower = query_text.lower().strip()
     
     # -------------------------------------------------------------
-    # Step 1: Intent Guardrail Check
+    # Step 1: LLM Intent Classification & Routing
     # -------------------------------------------------------------
-    is_out_of_scope, redirect_msg, guardrail_telemetry = check_intent_guardrail(query_text, language_code)
+    llm_decision = await route_query_with_llm(query_text)
+    is_in_scope = llm_decision.get("is_in_scope", True)
+    tool_used = llm_decision.get("tool_used", "rag_university_ordinances")
+    guardrail_telemetry = {"llm_reasoning": llm_decision.get("reasoning", "")}
     
-    if is_out_of_scope:
+    # -------------------------------------------------------------
+    # Step 2: Handle Out Of Scope
+    # -------------------------------------------------------------
+    if not is_in_scope:
+        lang = language_code if language_code in GUARDRAIL_RESPONSES else "hi-IN"
+        redirect_msg = GUARDRAIL_RESPONSES[lang]
+        
         audio_base64 = None
         tts_telemetry = {}
         if generate_audio:
@@ -66,15 +75,12 @@ async def process_user_query(
         }
 
     # -------------------------------------------------------------
-    # Step 2: Intent Classification & Routing (Tools vs RAG)
+    # Step 3: Tool Execution (In-Scope)
     # -------------------------------------------------------------
-    tool_used = None
     citations = []
     response_text = ""
     
-    # A. Check for University Overview / Ranking / Establishment Tool
-    if any(k in q_lower for k in ["overview", "ranking", "rank", "nirf", "naac", "established", "establish", "kab bani", "kab establish", "found", "founder", "campus", "area", "history", "itihaas", "achieve", "accredit", "university kab"]):
-        tool_used = "get_university_overview_and_ranking"
+    if tool_used == "get_university_overview_and_ranking":
         tool_data = get_university_overview_and_ranking(q_lower)
         
         name = tool_data.get('name', 'The University')
@@ -117,9 +123,7 @@ async def process_user_query(
             "section": "General Profile & NIRF Report"
         })
 
-    # B. Check for Library Tool
-    elif any(k in q_lower for k in ["library", "kitab", "pustak", "book", "shelf", "rack", "reading room", "clrs", "dsa", "algorithm"]):
-        tool_used = "check_library_status"
+    elif tool_used == "check_library_status":
         tool_data = check_library_status(q_lower)
         
         if tool_data.get("status") == "found":
@@ -158,9 +162,7 @@ async def process_user_query(
             "section": "Stack Management System"
         })
 
-    # C. Check for Faculty Contact Tool
-    elif any(k in q_lower for k in ["faculty", "professor", "teacher", "sir", "mam", "sharma", "nair", "ghosh", "deshmukh", "cabin", "office hour", "email"]):
-        tool_used = "find_faculty_contact"
+    elif tool_used == "find_faculty_contact":
         tool_data = find_faculty_contact(name=query_text)
         
         fac = tool_data["faculty_list"][0]
@@ -192,9 +194,7 @@ async def process_user_query(
             "section": fac["department"]
         })
 
-    # D. Check for Fee & Deadlines Tool
-    elif any(k in q_lower for k in ["fee", "fees", "due date", "deadline", "last date", "penalty", "late fee", "tarikh", "paise", "rupaye"]):
-        tool_used = "check_fee_deadlines"
+    elif tool_used == "check_fee_deadlines":
         tool_data = check_fee_deadlines(semester=6)
         fee = tool_data["fee_details"]
         
@@ -227,8 +227,8 @@ async def process_user_query(
             "section": "Clause 3.2 - Examination & Tuition Dues"
         })
 
-    # E. Default to Knowledge RAG (University Ordinances on Attendance, Branch Change, Hostels, Refunds)
     else:
+        # Default fallback to RAG
         tool_used = "rag_university_ordinances"
         rag_docs = search_university_ordinances(query_text, top_k=2)
         top_doc = rag_docs[0]
@@ -278,7 +278,7 @@ async def process_user_query(
             })
 
     # -------------------------------------------------------------
-    # Step 3: Speech Synthesis (TTS Voice Generation)
+    # Step 4: Speech Synthesis (TTS Voice Generation)
     # -------------------------------------------------------------
     audio_base64 = None
     tts_telemetry = {}

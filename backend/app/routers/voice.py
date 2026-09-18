@@ -16,17 +16,22 @@ class TTSRequest(BaseModel):
 
 @router.post("/stt")
 async def standalone_stt(
-    audio: UploadFile = File(...),
+    audio: UploadFile = File(..., alias="audio"),
     language_code: str = Form("hi-IN")
 ):
     """Direct STT transcription endpoint"""
     audio_bytes = await audio.read()
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Audio file empty")
+    
+    # Ensure Sarvam receives a recognized audio file extension
+    safe_filename = audio.filename or "recording.webm"
+    if not any(safe_filename.endswith(ext) for ext in [".wav", ".mp3", ".webm", ".ogg", ".m4a"]):
+        safe_filename = "recording.webm"
         
     transcript, telemetry = await transcribe_audio_sarvam(
         audio_bytes=audio_bytes,
-        filename=audio.filename or "audio.wav",
+        filename=safe_filename,
         language_code=language_code
     )
     return {
