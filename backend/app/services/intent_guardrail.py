@@ -74,12 +74,23 @@ OUT_OF_SCOPE_KEYWORDS = [
 ]
 
 UNIVERSITY_SCOPE_KEYWORDS = [
+    # English
     "university", "college", "campus", "rank", "ranking", "established", "history",
     "fee", "fees", "exam", "examination", "semester", "sem", "timetable", "schedule",
     "library", "book", "books", "shelf", "rack", "reading room", "faculty", "professor",
     "teacher", "hod", "cabin", "office hour", "attendance", "75%", "medical", "cgpa",
     "sgpa", "backlog", "supplementary", "hostel", "mess", "curfew", "ragging",
-    "anti-ragging", "ordinance", "rule", "admissions", "placement", "placement package"
+    "anti-ragging", "ordinance", "rule", "admissions", "placement", "placement package",
+    "timing", "timings", "time", "hours", "open", "close", "when",
+    # Hindi Devanagari keywords
+    "विश्वविद्यालय", "कॉलेज", "पुस्तकालय", "पुस्तक", "परीक्षा", "उपस्थिति",
+    "फीस", "शुल्क", "सेमेस्टर", "टाइमटेबल", "हॉस्टल", "शिक्षक", "प्रोफेसर",
+    "लाइब्रेरी", "समय", "किताब", "अटेंडेंस", "बैकलॉग", "रैंकिंग", "कैंपस",
+    "नियम", "प्रवेश", "छात्र", "अध्यादेश",
+    # Common transliterations
+    "laibreri", "library timing", "pariksha", "upasthiti", "hostal", "univarsiti",
+    "semester fee", "attendance rule", "branch change", "pustakalaya", "pustakaalay",
+    "kitab", "pustak", "siksha", "shiksha", "campus", "padhai",
 ]
 
 def check_intent_guardrail(query: str, language_code: str = "hi-IN") -> Tuple[bool, Optional[str], Dict[str, any]]:
@@ -96,17 +107,31 @@ def check_intent_guardrail(query: str, language_code: str = "hi-IN") -> Tuple[bo
     is_explicit_out_of_scope = any(k in q for k in OUT_OF_SCOPE_KEYWORDS)
     has_university_context = any(k in q for k in UNIVERSITY_SCOPE_KEYWORDS)
     
-    # If explicitly off-topic or empty context with external location names
-    if is_explicit_out_of_scope and not has_university_context:
-        lang = language_code if language_code in GUARDRAIL_RESPONSES else "hi-IN"
+    def _blocked_response(reason: str, keywords_found: list):
+        lang = language_code if language_code in GUARDRAIL_RESPONSES else "en-IN"
         msg = GUARDRAIL_RESPONSES[lang]
-        
         return True, msg, {
             "guardrail_status": "FILTERED_OUT_OF_SCOPE",
-            "reason": "Query detected as non-academic / external domain inquiry.",
-            "detected_keywords": [k for k in OUT_OF_SCOPE_KEYWORDS if k in q],
+            "reason": reason,
+            "detected_keywords": keywords_found,
             "action_taken": "Polite native-language redirect triggered without executing backend tools."
         }
+
+    # Condition 1: Explicitly off-topic keyword detected
+    if is_explicit_out_of_scope and not has_university_context:
+        return _blocked_response(
+            "Query detected as non-academic / external domain inquiry.",
+            [k for k in OUT_OF_SCOPE_KEYWORDS if k in q]
+        )
+
+    # Condition 2: Zero university keywords and query is long enough to be a real question
+    # Short queries (<=3 words) could be greetings or continuations — allow them
+    word_count = len(q.split())
+    if not has_university_context and word_count >= 4:
+        return _blocked_response(
+            "No university-related keywords detected in query.",
+            []
+        )
         
     return False, None, {
         "guardrail_status": "PASSED_IN_SCOPE",

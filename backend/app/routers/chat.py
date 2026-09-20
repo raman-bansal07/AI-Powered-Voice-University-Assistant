@@ -44,7 +44,7 @@ async def voice_chat_endpoint(
 ):
     """
     Direct voice upload endpoint.
-    Receives raw user audio -> Sarvam saaras:v2 STT -> Agent Pipeline -> Sarvam bulbul:v2 TTS.
+    Receives raw user audio -> Sarvam saaras:v3 STT -> Agent Pipeline -> Sarvam bulbul:v3 TTS.
     """
     audio_bytes = await audio.read()
     if not audio_bytes:

@@ -78,5 +78,23 @@ UNIVERSITY_RULEBOOK_DOCS = [
             "- 50% refund: If withdrawal is received between 16 to 30 days after the last date of admission. "
             "- 0% refund: If withdrawal is received more than 30 days after the last date of admission (only Caution Money / Security Deposit is refunded in full)."
         )
-    }
+    },
+    {
+        "id": "ORD-LIB-06",
+        "title": "Central Library Timings, Services & Digital Access Policy",
+        "category": "library_services",
+        "section": "Library Policy 2025-26",
+        "keywords": ["library timings", "library open", "library hours", "library time", "reading room", "library close", "library schedule", "central library", "library when"],
+        "content": (
+            "Central Library (AITU) — Operating Hours & Services: "
+            "Weekdays (Monday–Friday): 8:00 AM to 9:00 PM. "
+            "Saturday: 9:00 AM to 5:00 PM. "
+            "Sunday & Public Holidays: 10:00 AM to 2:00 PM (Reference Section only). "
+            "During End-Semester Exams: Extended hours 7:30 AM to 10:00 PM on all weekdays. "
+            "The Reading Room (2nd Floor) is open 24×7 for B.Tech and postgraduate students with valid student ID. "
+            "Digital E-Library portal (library.university.edu.in) is accessible 24×7 with institutional login. "
+            "Book issue limit: 3 books for UG students (14-day loan period), 5 books for PG/PhD (21-day loan period). "
+            "Late return fine: ₹2 per book per day after the due date. Lost book replacement: full cost + 10% handling charges."
+        )
+    },
 ]

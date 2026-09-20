@@ -230,7 +230,7 @@ async def process_user_query(
     else:
         # Default fallback to RAG
         tool_used = "rag_university_ordinances"
-        rag_docs = search_university_ordinances(query_text, top_k=2)
+        rag_docs = await search_university_ordinances(query_text, top_k=2)
         top_doc = rag_docs[0]
         
         if "attendance" in top_doc["category"]:
@@ -265,6 +265,19 @@ async def process_user_query(
                 response_text = (
                     "Hostel curfew is 9:30 PM on weekdays and 10:30 PM on weekends. "
                     "The campus enforces a strict Zero-Tolerance Anti-Ragging policy with immediate suspension and FIR for violations."
+                )
+        elif "library_services" in top_doc["category"]:
+            if language_code == "hi-IN":
+                response_text = (
+                    "केंद्रीय पुस्तकालय (AITU) सोमवार से शुक्रवार सुबह 8:00 बजे से रात 9:00 बजे तक खुला रहता है। "
+                    "शनिवार को सुबह 9:00 से शाम 5:00 बजे तक, और रविवार को सुबह 10:00 से दोपहर 2:00 बजे तक (केवल रेफरेंस सेक्शन)। "
+                    "परीक्षा के दौरान लाइब्रेरी का समय सुबह 7:30 से रात 10:00 बजे तक बढ़ा दिया जाता है।"
+                )
+            else:
+                response_text = (
+                    "The Central Library is open Monday–Friday: 8:00 AM – 9:00 PM, Saturday: 9:00 AM – 5:00 PM, and Sunday: 10:00 AM – 2:00 PM (Reference Section only). "
+                    "During End-Semester Exams, extended hours apply: 7:30 AM – 10:00 PM on all weekdays. "
+                    "The 2nd Floor Reading Room is open 24×7 for students with a valid ID card."
                 )
         else:
             response_text = top_doc["content"]

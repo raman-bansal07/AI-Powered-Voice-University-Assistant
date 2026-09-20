@@ -1,5 +1,5 @@
 """
-Sarvam AI Service (STT: saaras:v2 & TTS: bulbul:v2).
+Sarvam AI Service (STT: saaras:v3 & TTS: bulbul:v3).
 Provides high-accuracy Speech-to-Text and Text-to-Speech for 10+ Indian Languages.
 """
 

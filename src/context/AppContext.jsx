@@ -142,13 +142,14 @@ export const AppProvider = ({ children }) => {
             category: c.source_type,
             section: c.section,
             confidence: c.relevance_score || 0.92,
+            pageNumber: c.reference_id || (i + 1),
             accessLevel: 'public',
           })),
           trace: [
-            { step: 1, layer: 'STT', azureService: `Sarvam saaras:v2 (${lang.code})`, latencyMs: data.telemetry?.stt?.status_code === 200 ? 140 : 0, detail: `Transcribed to ${lang.name}`, status: 'completed' },
+            { step: 1, layer: 'STT', azureService: `Sarvam saaras:v3 (${lang.code})`, latencyMs: data.telemetry?.stt?.status_code === 200 ? 140 : 0, detail: `Transcribed to ${lang.name}`, status: 'completed' },
             { step: 2, layer: 'Intent Guardrail', azureService: 'Intent Router', latencyMs: 2, detail: data.telemetry?.guardrail?.guardrail_status || 'PASSED_IN_SCOPE', status: 'completed' },
             { step: 3, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
-            { step: 4, layer: 'TTS Synthesis', azureService: `Sarvam bulbul:v2 (${lang.code})`, latencyMs: data.telemetry?.tts?.status_code === 200 ? 180 : 0, detail: `Voice synthesized in ${lang.name}`, status: 'completed' },
+            { step: 4, layer: 'TTS Synthesis', azureService: `Sarvam bulbul:v3 (${lang.code})`, latencyMs: data.telemetry?.tts?.status_code === 200 ? 180 : 0, detail: `Voice synthesized in ${lang.name}`, status: 'completed' },
           ],
           telemetry: data.telemetry,
         };
