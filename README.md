@@ -1,9 +1,7 @@
 <div align="center">
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Microsoft_Azure_Logo.svg/1024px-Microsoft_Azure_Logo.svg.png" alt="Azure Logo" width="100"/>
-<img src="https://framerusercontent.com/images/3K7sN2L8Hj05gYn2tK2R0z8H0M.png" alt="Sarvam Logo" width="120" style="margin-left: 20px;"/>
-
-# UnivAI: Multilingual Voice Assistant
+<img src="https://img.icons8.com/color/96/000000/azure-1.png" alt="Azure Logo" width="80"/>
+<h1 style="margin-bottom: 0;">UnivAI: Multilingual Voice Assistant</h1>
 **AI-Powered University Knowledge & Academic Assistant**
 
 [![Capstone Project](https://img.shields.io/badge/Capstone_Project-2025--2026-blue.svg?style=for-the-badge)](#)
