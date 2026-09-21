@@ -5,23 +5,19 @@ import { Footer } from './components/layout/Footer';
 import { AboutPage } from './pages/AboutPage';
 import { AssistantPage } from './pages/AssistantPage';
 import { ArchitecturePage } from './pages/ArchitecturePage';
-import { KnowledgePage } from './pages/KnowledgePage';
 import { TechnologyPage } from './pages/TechnologyPage';
-import { SecurityPage } from './pages/SecurityPage';
 import { TeamPage } from './pages/TeamPage';
 
 const AppRouter = () => {
   const { currentRoute } = useApp();
 
   return (
-    <main style={{ minHeight: 'calc(100vh - 68px - 340px)' }}>
-      {currentRoute === 'about' && <AboutPage />}
-      {currentRoute === 'assistant' && <AssistantPage />}
+    <main style={{ minHeight: 'calc(100vh - 60px - 260px)' }}>
+      {currentRoute === 'about'        && <AboutPage />}
+      {currentRoute === 'assistant'    && <AssistantPage />}
       {currentRoute === 'architecture' && <ArchitecturePage />}
-      {currentRoute === 'knowledge' && <KnowledgePage />}
-      {currentRoute === 'technology' && <TechnologyPage />}
-      {currentRoute === 'security' && <SecurityPage />}
-      {currentRoute === 'team' && <TeamPage />}
+      {currentRoute === 'technology'   && <TechnologyPage />}
+      {currentRoute === 'team'         && <TeamPage />}
     </main>
   );
 };
@@ -29,7 +25,7 @@ const AppRouter = () => {
 export function App() {
   return (
     <AppProvider>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F8FAFC' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#0A0E1A' }}>
         <Navbar />
         <AppRouter />
         <Footer />

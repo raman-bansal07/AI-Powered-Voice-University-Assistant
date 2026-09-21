@@ -121,9 +121,9 @@ export const VoiceController = () => {
     <div
       className="card"
       style={{
-        backgroundColor: '#FFFFFF',
-        borderColor: isInteracting ? '#0078D4' : '#E2E8F0',
-        boxShadow: isInteracting ? '0 10px 25px -5px rgba(0, 120, 212, 0.15)' : 'var(--shadow-md)',
+        backgroundColor: 'var(--bg-card)',
+        borderColor: isInteracting ? 'var(--border-blue)' : 'var(--border)',
+        boxShadow: isInteracting ? 'var(--shadow-glow)' : 'var(--shadow-sm)',
         transition: 'all 0.25s ease',
         padding: '2rem',
         marginBottom: '2rem',
@@ -158,12 +158,12 @@ export const VoiceController = () => {
                   ? '#8B5CF6'
                   : voiceState === 'speaking'
                   ? '#10B981'
-                  : '#94A3B8',
+                  : '#3B4570',
               boxShadow: isInteracting ? '0 0 10px currentColor' : 'none',
               animation: isRecording ? 'pulse 1s infinite' : 'none',
             }}
           />
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             {statusLabel}
           </span>
         </div>
@@ -192,42 +192,32 @@ export const VoiceController = () => {
         </div>
       </div>
 
-      {/* Language Quick-Select Bar */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748B', marginBottom: '0.5rem' }}>
-          SELECT RECOGNITION DIALECT:
-        </div>
-        <div
+      {/* Language Dropdown */}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+          🌐 Language
+        </label>
+        <select
+          value={selectedLanguage.code}
+          onChange={(e) => setSelectedLanguageCode(e.target.value)}
+          disabled={isRecording || voiceState !== 'idle'}
           style={{
-            display: 'flex',
-            gap: '6px',
-            overflowX: 'auto',
-            paddingBottom: '4px',
+            flex: 1, padding: '0.45rem 0.8rem',
+            background: 'var(--bg-muted)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-blue)',
+            borderRadius: 9, fontSize: '0.875rem',
+            fontWeight: 600, fontFamily: 'var(--font-sans)',
+            cursor: 'pointer', outline: 'none',
+            opacity: (isRecording || voiceState !== 'idle') ? 0.5 : 1,
           }}
         >
           {INDIAN_LANGUAGES.map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => setSelectedLanguageCode(lang.code)}
-              disabled={isRecording || voiceState !== 'idle'}
-              className="btn btn-sm"
-              style={{
-                background: selectedLanguage.code === lang.code ? '#0078D4' : '#F1F5F9',
-                color: selectedLanguage.code === lang.code ? '#FFFFFF' : '#334155',
-                border: 'none',
-                borderRadius: '20px',
-                padding: '4px 12px',
-                fontSize: '0.75rem',
-                fontWeight: selectedLanguage.code === lang.code ? 700 : 500,
-                flexShrink: 0,
-                opacity: (isRecording || voiceState !== 'idle') ? 0.5 : 1,
-              }}
-            >
-              <span>{lang.name}</span>
-              <span style={{ opacity: 0.7, fontSize: '0.7rem' }}>({lang.nativeName})</span>
-            </button>
+            <option key={lang.code} value={lang.code}>
+              {lang.name}  ({lang.nativeName})
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* Main Stage: Voice Orb or Text Input */}
@@ -295,7 +285,7 @@ export const VoiceController = () => {
 
           {/* Status / Hint */}
           <div style={{ textAlign: 'center', maxWidth: '460px' }}>
-            <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.25rem' }}>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
               {isRecording
                 ? `Recording in ${selectedLanguage.name} — Click mic to stop & send`
                 : voiceState !== 'idle'
@@ -303,7 +293,7 @@ export const VoiceController = () => {
                 : `Tap Mic to ask in ${selectedLanguage.name}`}
             </div>
             {!isRecording && voiceState === 'idle' && (
-              <div style={{ fontSize: '0.8125rem', color: '#64748B' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
                 Sample: "{selectedLanguage.samplePrompt}"
               </div>
             )}

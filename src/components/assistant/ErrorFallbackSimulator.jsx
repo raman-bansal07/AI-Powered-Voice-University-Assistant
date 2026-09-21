@@ -45,17 +45,16 @@ export const ErrorFallbackSimulator = () => {
       style={{
         padding: '1.5rem',
         borderRadius: '14px',
-        backgroundColor: '#FFFFFF',
         marginBottom: '2rem',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.4rem' }}>
         <ShieldAlert size={18} color="#0078D4" />
-        <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#0F172A' }}>
+        <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>
           Reliability & Fallback Simulator
         </h3>
       </div>
-      <p style={{ fontSize: '0.8125rem', color: '#64748B', marginBottom: '1rem' }}>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
         Test how the system gracefully handles noisy audio, ungrounded inquiries, or unauthorized RBAC requests:
       </p>
 
@@ -72,8 +71,8 @@ export const ErrorFallbackSimulator = () => {
                 gap: '4px',
                 padding: '0.75rem 1rem',
                 borderRadius: '10px',
-                border: isSelected ? '1px solid #0078D4' : '1px solid #E2E8F0',
-                backgroundColor: isSelected ? '#EFF6FF' : '#F8FAFC',
+                border: isSelected ? '1px solid var(--border-blue)' : '1px solid var(--border)',
+                backgroundColor: isSelected ? 'rgba(37,99,235,0.15)' : 'var(--bg-muted)',
                 textAlign: 'left',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
@@ -81,11 +80,11 @@ export const ErrorFallbackSimulator = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {opt.icon}
-                <span style={{ fontSize: '0.8125rem', fontWeight: isSelected ? 700 : 600, color: '#0F172A' }}>
+                <span style={{ fontSize: '0.8125rem', fontWeight: isSelected ? 700 : 600, color: 'var(--text-primary)' }}>
                   {opt.label}
                 </span>
               </div>
-              <span style={{ fontSize: '0.7rem', color: '#64748B', lineHeight: 1.4 }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                 {opt.desc}
               </span>
             </button>

@@ -1,294 +1,287 @@
-import React, { useState, useEffect } from 'react';
-import { useApp } from '../../context/AppContext';
-import { ARCHITECTURE_NODES, SAMPLE_TRACE_STEPS } from '../../data/architectureNodes';
-import { Badge } from '../common/Badge';
-import {
-  User,
-  Layout,
-  Server,
-  Mic,
-  Cpu,
-  Sparkles,
-  Database,
-  Search,
-  FileText,
-  Volume2,
-  Play,
-  RotateCcw,
-  ArrowRight,
-  ArrowDown,
-  CheckCircle2,
-} from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+
+// ─────────────────────────────────────────────
+// Flow nodes definition
+// ─────────────────────────────────────────────
+const STEPS = [
+  {
+    id: 'user',
+    icon: '🎤',
+    title: 'User',
+    desc: 'Speaks in selected language\n(Hindi / Tamil / Telugu / ...)',
+    color: '#2563EB',
+    bg: '#EFF6FF',
+  },
+  {
+    id: 'stt',
+    icon: '🎧',
+    title: 'Sarvam STT  (saaras:v3)',
+    desc: 'Converts speech → text in same language',
+    fallback: 'Azure Speech STT if Sarvam fails',
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+  },
+  {
+    id: 'translate',
+    icon: '🔤',
+    title: 'Query → English (internal)',
+    desc: 'GPT-4.1-mini translates query to English\nso Azure AI Search can retrieve accurately',
+    color: '#D97706',
+    bg: '#FFFBEB',
+  },
+  {
+    id: 'router',
+    icon: '🧭',
+    title: 'Intent Router (GPT-4.1-mini)',
+    desc: 'Classifies: IN-SCOPE or OUT-OF-SCOPE\nPicks the right tool to call',
+    fallback: 'Out-of-scope → polite redirect in user language',
+    color: '#0891B2',
+    bg: '#ECFEFF',
+  },
+  {
+    id: 'tools',
+    icon: '🔧',
+    title: 'Tool / RAG Execution',
+    desc: 'Fees · Library · Faculty · Ranking · Ordinances\nAzure AI Search retrieves English docs',
+    color: '#059669',
+    bg: '#ECFDF5',
+  },
+  {
+    id: 'llm',
+    icon: '✨',
+    title: 'GPT-4.1-mini Response',
+    desc: 'Generates answer grounded in retrieved docs\nResponds in user\'s selected language',
+    fallback: 'Hardcoded template if OpenAI offline',
+    color: '#7C3AED',
+    bg: '#F5F3FF',
+  },
+  {
+    id: 'tts',
+    icon: '🔊',
+    title: 'Sarvam TTS  (bulbul:v3)',
+    desc: 'Speaks answer in user\'s language\n(same language as their question)',
+    fallback: 'Azure Neural TTS if Sarvam fails',
+    color: '#DB2777',
+    bg: '#FDF2F8',
+  },
+  {
+    id: 'output',
+    icon: '💬',
+    title: 'Screen + Voice Output',
+    desc: 'Text shown in user\'s script (Tamil/Hindi/...)\nAudio played in same language',
+    color: '#2563EB',
+    bg: '#EFF6FF',
+  },
+];
+
+const SUPPORTED_LANGS = [
+  'हिन्दी', 'English', 'தமிழ்', 'తెలుగు',
+  'मराठी', 'বাংলা', 'ગુજરાતી', 'ಕನ್ನಡ', 'മലയാളം', 'ਪੰਜਾਬੀ',
+];
 
 export const ArchitectureDiagram = () => {
-  const { setActiveArchitectureNode } = useApp();
-  const [activeStepIndex, setActiveStepIndex] = useState(null);
-  const [isPlayingTrace, setIsPlayingTrace] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(null);
+  const [playing, setPlaying] = useState(false);
+  const timerRef = useRef(null);
 
-  // Playback timer
   useEffect(() => {
-    let timer;
-    if (isPlayingTrace) {
-      timer = window.setInterval(() => {
-        setActiveStepIndex((prev) => {
-          if (prev === null || prev >= SAMPLE_TRACE_STEPS.length - 1) {
-            setIsPlayingTrace(false);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1600);
+    if (playing) {
+      let i = 0;
+      setActiveIdx(0);
+      timerRef.current = setInterval(() => {
+        i += 1;
+        if (i >= STEPS.length) {
+          clearInterval(timerRef.current);
+          setPlaying(false);
+          setActiveIdx(null);
+        } else {
+          setActiveIdx(i);
+        }
+      }, 1200);
+    } else {
+      clearInterval(timerRef.current);
     }
-    return () => clearInterval(timer);
-  }, [isPlayingTrace]);
+    return () => clearInterval(timerRef.current);
+  }, [playing]);
 
-  const startTrace = () => {
-    setActiveStepIndex(0);
-    setIsPlayingTrace(true);
-  };
-
-  const resetTrace = () => {
-    setIsPlayingTrace(false);
-    setActiveStepIndex(null);
-  };
-
-  const currentStep = activeStepIndex !== null ? SAMPLE_TRACE_STEPS[activeStepIndex] : null;
-
-  // Helper to render an architecture node box
-  const renderNodeBox = (nodeId, colorTheme = 'blue') => {
-    const node = ARCHITECTURE_NODES[nodeId];
-    if (!node) return null;
-
-    const isCurrentActiveInTrace = currentStep?.nodeId === nodeId;
-
-    const themeStyles = {
-      blue: { border: '#0078D4', bg: '#F0F7FF', iconBg: '#0078D4', text: '#0078D4' },
-      navy: { border: '#0B192C', bg: '#F8FAFC', iconBg: '#0B192C', text: '#0F172A' },
-      purple: { border: '#7C3AED', bg: '#FAF5FF', iconBg: '#7C3AED', text: '#6D28D9' },
-      emerald: { border: '#059669', bg: '#ECFDF5', iconBg: '#059669', text: '#047857' },
-      amber: { border: '#D97706', bg: '#FFFBEB', iconBg: '#D97706', text: '#B45309' },
-    }[colorTheme];
-
-    return (
-      <div
-        onClick={() => setActiveArchitectureNode(node)}
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: isCurrentActiveInTrace
-            ? `2px solid ${themeStyles.border}`
-            : '1px solid #CBD5E1',
-          borderRadius: '10px',
-          padding: '1rem',
-          boxShadow: isCurrentActiveInTrace
-            ? `0 0 0 4px rgba(0, 120, 212, 0.2), 0 8px 16px rgba(0,0,0,0.08)`
-            : 'var(--shadow-sm)',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px',
-        }}
-      >
-        {isCurrentActiveInTrace && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '-10px',
-              right: '12px',
-              backgroundColor: '#0078D4',
-              color: '#FFFFFF',
-              fontSize: '0.6875rem',
-              fontWeight: 700,
-              padding: '2px 8px',
-              borderRadius: '20px',
-            }}
-          >
-            ACTIVE TRACE STEP {currentStep.stepNumber}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: themeStyles.bg,
-                color: themeStyles.border,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {node.iconName === 'User' && <User size={18} />}
-              {node.iconName === 'Layout' && <Layout size={18} />}
-              {node.iconName === 'Server' && <Server size={18} />}
-              {node.iconName === 'Mic' && <Mic size={18} />}
-              {node.iconName === 'Cpu' && <Cpu size={18} />}
-              {node.iconName === 'Sparkles' && <Sparkles size={18} />}
-              {node.iconName === 'Database' && <Database size={18} />}
-              {node.iconName === 'Search' && <Search size={18} />}
-              {node.iconName === 'FileText' && <FileText size={18} />}
-              {node.iconName === 'Volume2' && <Volume2 size={18} />}
-            </div>
-            <div>
-              <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>
-                {node.label}
-              </div>
-              <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
-                {node.subtitle}
-              </div>
-            </div>
-          </div>
-
-          <span className="badge" style={{ fontSize: '0.6875rem' }}>
-            {node.latencySla}
-          </span>
-        </div>
-
-        {node.azureService && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#0078D4' }}>
-              ✦ {node.azureService}
-            </span>
-          </div>
-        )}
-      </div>
-    );
+  const handlePlay = () => {
+    setActiveIdx(null);
+    setPlaying(false);
+    setTimeout(() => setPlaying(true), 50);
   };
 
   return (
-    <div
-      className="card"
-      style={{
-        padding: '1.75rem',
-        borderRadius: '16px',
-        backgroundColor: '#FFFFFF',
-        boxShadow: 'var(--shadow-md)',
-      }}
-    >
-      {/* Top Controls: Interactive Simulation Player */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          paddingBottom: '1.25rem',
-          marginBottom: '1.5rem',
-          borderBottom: '1px solid #E2E8F0',
-        }}
-      >
+    <div style={{
+      background: '#FAFAFA',
+      border: '1px solid #E2E8F0',
+      borderRadius: 16,
+      padding: '24px 28px',
+      fontFamily: "'Inter', 'Segoe UI', sans-serif",
+    }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0F172A' }}>
-            End-to-End Architecture Flow
-          </h2>
-          <p style={{ fontSize: '0.8125rem', color: '#64748B' }}>
-            Click any node below to inspect parameters, or play the live audio query simulation.
-          </p>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#0F172A' }}>
+            End-to-End Flow
+          </div>
+          <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+            Click any step · <span style={{ color: '#D97706' }}>Orange = fallback path</span>
+          </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={isPlayingTrace ? () => setIsPlayingTrace(false) : startTrace}
-            className="btn btn-primary btn-sm"
+            onClick={handlePlay}
+            style={{
+              background: playing ? '#DC2626' : '#2563EB',
+              color: '#fff', border: 'none', borderRadius: 8,
+              padding: '7px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}
           >
-            <Play size={14} />
-            <span>{isPlayingTrace ? 'Pause Simulation' : 'Simulate Query Flow'}</span>
+            {playing ? '■ Stop' : '▶ Simulate'}
           </button>
-
           <button
-            onClick={resetTrace}
-            className="btn btn-secondary btn-sm"
-            title="Reset Simulation"
+            onClick={() => { setPlaying(false); setActiveIdx(null); }}
+            style={{
+              background: 'transparent', border: '1px solid #CBD5E1',
+              borderRadius: 8, padding: '7px 14px', fontSize: 12,
+              color: '#64748B', cursor: 'pointer',
+            }}
           >
-            <RotateCcw size={14} />
-            <span>Reset</span>
+            Reset
           </button>
         </div>
       </div>
 
-      {/* Active Step Telemetry Banner */}
-      {currentStep && (
-        <div
-          style={{
-            backgroundColor: '#0F172A',
-            color: '#FFFFFF',
-            borderRadius: '10px',
-            padding: '1rem 1.25rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-              <span className="badge badge-azure" style={{ fontSize: '0.6875rem' }}>
-                STEP {currentStep.stepNumber} OF {SAMPLE_TRACE_STEPS.length}
-              </span>
-              <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: '#38BDF8' }}>
-                {currentStep.title}
-              </span>
-              <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                ({currentStep.azureService})
-              </span>
-            </div>
-            <div style={{ fontSize: '0.8125rem', color: '#CBD5E1' }}>
-              {currentStep.actionSummary}
-            </div>
-          </div>
+      {/* Flow */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+        {STEPS.map((step, idx) => {
+          const isActive = activeIdx === idx;
+          return (
+            <React.Fragment key={step.id}>
+              {/* Node */}
+              <div
+                onClick={() => setActiveIdx(activeIdx === idx ? null : idx)}
+                style={{
+                  width: '100%',
+                  maxWidth: 560,
+                  background: isActive ? step.bg : '#FFFFFF',
+                  border: `1.5px solid ${isActive ? step.color : '#E2E8F0'}`,
+                  borderRadius: 10,
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  boxShadow: isActive
+                    ? `0 0 0 3px ${step.color}22, 0 4px 16px ${step.color}18`
+                    : '0 1px 4px rgba(0,0,0,0.06)',
+                  transition: 'all 0.25s ease',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}
+              >
+                {/* Icon */}
+                <div style={{
+                  width: 38, height: 38, borderRadius: 8, flexShrink: 0,
+                  background: isActive ? step.color : '#F1F5F9',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, transition: 'all 0.25s ease',
+                }}>
+                  {step.icon}
+                </div>
 
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#34D399' }}>
-              {currentStep.latencyMs}ms
-            </div>
-            <div style={{ fontSize: '0.6875rem', color: '#94A3B8' }}>Step Latency</div>
-          </div>
-        </div>
-      )}
+                {/* Text */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontWeight: 700, fontSize: 13.5,
+                    color: isActive ? step.color : '#1E293B',
+                    marginBottom: 3,
+                  }}>
+                    {step.title}
+                  </div>
+                  <div style={{
+                    fontSize: 11.5, color: '#64748B', lineHeight: 1.5,
+                    whiteSpace: 'pre-line',
+                  }}>
+                    {step.desc}
+                  </div>
+                  {step.fallback && (
+                    <div style={{
+                      marginTop: 6, fontSize: 11,
+                      color: '#D97706', background: '#FFFBEB',
+                      border: '1px dashed #FCD34D',
+                      borderRadius: 6, padding: '3px 8px',
+                      display: 'inline-block',
+                    }}>
+                      ⚠ Fallback: {step.fallback}
+                    </div>
+                  )}
+                </div>
 
-      {/* Visual Pipeline Grid */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {/* Layer 1: Client & Ingestion */}
-        <div>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-            LAYER 1: CLIENT & INGESTION
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-            {renderNodeBox('student', 'navy')}
-            {renderNodeBox('web_mobile_ui', 'blue')}
-            {renderNodeBox('nodejs_backend', 'navy')}
-          </div>
-        </div>
+                {/* Step number */}
+                <div style={{
+                  fontSize: 11, fontWeight: 700,
+                  color: isActive ? step.color : '#CBD5E1',
+                  flexShrink: 0, alignSelf: 'center',
+                  minWidth: 24, textAlign: 'right',
+                }}>
+                  {idx + 1}/{STEPS.length}
+                </div>
+              </div>
 
-        {/* Layer 2: Speech & AI Reasoning */}
-        <div>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-            LAYER 2: SPEECH & COGNITIVE REASONING
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-            {renderNodeBox('azure_ai_speech_stt', 'blue')}
-            {renderNodeBox('azure_openai_models', 'purple')}
-            {renderNodeBox('azure_ai_speech_tts', 'blue')}
-          </div>
-        </div>
+              {/* Arrow between steps */}
+              {idx < STEPS.length - 1 && (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  margin: '3px 0',
+                }}>
+                  <div style={{
+                    width: 1.5, height: 12,
+                    background: activeIdx !== null && idx < activeIdx ? '#2563EB' : '#CBD5E1',
+                    transition: 'background 0.3s',
+                  }} />
+                  <div style={{
+                    width: 0, height: 0,
+                    borderLeft: '5px solid transparent',
+                    borderRight: '5px solid transparent',
+                    borderTop: `6px solid ${activeIdx !== null && idx < activeIdx ? '#2563EB' : '#CBD5E1'}`,
+                    transition: 'border-color 0.3s',
+                  }} />
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-        {/* Layer 3: Grounded RAG Knowledge Base */}
-        <div>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-            LAYER 3: GROUNDED RAG KNOWLEDGE BASE
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-            {renderNodeBox('azure_ai_search', 'emerald')}
-            {renderNodeBox('univ_documents_knowledge', 'emerald')}
-          </div>
+      {/* Language bar */}
+      <div style={{
+        marginTop: 20, padding: '12px 16px',
+        background: '#F8FAFC', borderRadius: 10,
+        border: '1px solid #E2E8F0',
+      }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Supported Languages (Sarvam AI)
         </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {SUPPORTED_LANGS.map(lang => (
+            <span key={lang} style={{
+              fontSize: 12, color: '#475569', background: '#FFFFFF',
+              border: '1px solid #E2E8F0', borderRadius: 20,
+              padding: '3px 11px', fontWeight: 500,
+            }}>
+              {lang}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Key insight */}
+      <div style={{
+        marginTop: 12, padding: '10px 14px',
+        background: '#FFFBEB', border: '1px solid #FCD34D',
+        borderRadius: 8, fontSize: 12, color: '#92400E', lineHeight: 1.5,
+      }}>
+        <strong>🔑 How it works:</strong> User speaks in Tamil → Sarvam STT transcribes in Tamil → query translated to English internally (for accurate RAG search) → GPT-4.1-mini replies in Tamil → Sarvam TTS speaks in Tamil → screen also shows Tamil text.
       </div>
     </div>
   );

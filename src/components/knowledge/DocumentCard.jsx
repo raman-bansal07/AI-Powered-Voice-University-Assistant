@@ -57,14 +57,6 @@ export const DocumentCard = ({ doc }) => {
           </span>
         </div>
 
-        <button
-          className="btn btn-secondary btn-sm"
-          style={{ width: '100%', justifyContent: 'space-between', fontSize: '0.75rem' }}
-          onClick={() => setActiveKnowledgeDoc(doc)}
-        >
-          <span>Inspect Chunks</span>
-          <ArrowRight size={13} />
-        </button>
       </div>
     </div>
   );

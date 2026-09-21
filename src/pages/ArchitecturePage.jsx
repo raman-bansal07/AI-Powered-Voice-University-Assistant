@@ -1,69 +1,70 @@
 import React from 'react';
 import { ArchitectureDiagram } from '../components/architecture/ArchitectureDiagram';
-import { NodeDetailsDrawer } from '../components/architecture/NodeDetailsDrawer';
 import { Layers, Mic, Cpu, Database } from 'lucide-react';
+
+const LAYERS = [
+  {
+    num: '1',
+    color: '#3B82F6',
+    icon: <Mic size={16} color="#3B82F6" />,
+    title: 'Speech Layer (STT / TTS)',
+    desc: 'Sarvam AI (saaras:v3) transcribes user speech in any Indian language. Sarvam TTS (bulbul:v3) speaks the answer back. Azure Speech as fallback.',
+  },
+  {
+    num: '2',
+    color: '#A78BFA',
+    icon: <Cpu size={16} color="#A78BFA" />,
+    title: 'Reasoning Layer (LLM)',
+    desc: 'GPT-4.1-mini routes intent, translates non-English queries to English for RAG, then generates the final answer in the user\'s selected language.',
+  },
+  {
+    num: '3',
+    color: '#34D399',
+    icon: <Database size={16} color="#34D399" />,
+    title: 'Grounded RAG Layer',
+    desc: 'Azure AI Search (hybrid vector + semantic re-ranking) retrieves from official university ordinances — every answer is cited, zero hallucinations.',
+  },
+];
 
 export const ArchitecturePage = () => {
   return (
-    <div className="container animate-fade-in" style={{ padding: '2rem 1rem 4rem 1rem' }}>
+    <div className="container animate-fade-in" style={{ padding: '3rem 1.5rem 5rem' }}>
+
       {/* Header */}
-      <div style={{ marginBottom: '1.75rem', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}>
-          <span className="badge badge-azure">
-            <Layers size={12} />
-            System Blueprint
-          </span>
+      <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <span className="badge badge-azure"><Layers size={11} />System Blueprint</span>
           <span className="badge badge-success">3-Layer Pipeline</span>
         </div>
-        <h1 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem' }}>
+        <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.04em', marginBottom: 8 }}>
           Technical Architecture
         </h1>
-        <p style={{ fontSize: '0.875rem', color: '#64748B' }}>
-          Click any architectural node or simulate a live audio trace.
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+          Click any step · ▶ Simulate to trace the full voice pipeline
         </p>
       </div>
 
-      {/* Main Diagram */}
-      <div style={{ marginBottom: '2.5rem' }}>
+      {/* Diagram */}
+      <div style={{ marginBottom: '2rem' }}>
         <ArchitectureDiagram />
       </div>
 
-      {/* 3 Core Orchestration Layers */}
-      <div style={{ marginBottom: '2.5rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
-          <div className="card" style={{ borderTop: '3px solid #0078D4', padding: '1.25rem', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}>
-              <Mic size={16} color="#0078D4" />
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>1. Speech (STT/TTS)</h3>
+      {/* 3 Layer Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+        {LAYERS.map(({ num, color, icon, title, desc }) => (
+          <div key={num} className="card" style={{ padding: '1.25rem', borderTop: `3px solid ${color}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                background: `${color}18`, border: `1px solid ${color}33`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{icon}</div>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-primary)' }}>{num}. {title}</h3>
             </div>
-            <p style={{ fontSize: '0.78125rem', color: '#64748B', lineHeight: 1.45 }}>
-              Azure AI Speech WebSocket streaming for Indic transcription and neural voice responses.
-            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{desc}</p>
           </div>
-
-          <div className="card" style={{ borderTop: '3px solid #7C3AED', padding: '1.25rem', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}>
-              <Cpu size={16} color="#7C3AED" />
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>2. Reasoning LLM</h3>
-            </div>
-            <p style={{ fontSize: '0.78125rem', color: '#64748B', lineHeight: 1.45 }}>
-              Azure OpenAI (GPT-4o) evaluates intent and synthesizes grounded answers.
-            </p>
-          </div>
-
-          <div className="card" style={{ borderTop: '3px solid #059669', padding: '1.25rem', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}>
-              <Database size={16} color="#059669" />
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700 }}>3. Grounded RAG</h3>
-            </div>
-            <p style={{ fontSize: '0.78125rem', color: '#64748B', lineHeight: 1.45 }}>
-              Azure AI Search dense vector index with Semantic Re-ranker over university circulars.
-            </p>
-          </div>
-        </div>
+        ))}
       </div>
-
-      <NodeDetailsDrawer />
     </div>
   );
 };

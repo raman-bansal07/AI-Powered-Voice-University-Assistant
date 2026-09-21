@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = int(os.getenv("BACKEND_PORT", "8000"))
     
     # Supported Indian Languages mapping to Sarvam / Azure codes & speaker profiles
+    # Supported Indian Languages mapping to Sarvam / Azure codes & speaker profiles
     LANGUAGE_MAPPINGS: Dict[str, Dict[str, str]] = {
         "hi-IN": {
             "name": "Hindi",
@@ -123,4 +124,30 @@ class Settings(BaseSettings):
         }
     }
 
+    def get_language_info(self, code: str) -> Dict[str, str]:
+        """Resolves language info supporting both 2-letter codes ('ta', 'hi') and locales ('ta-IN', 'hi-IN')."""
+        if not code:
+            return self.LANGUAGE_MAPPINGS["hi-IN"]
+        clean = code.strip()
+        if clean in self.LANGUAGE_MAPPINGS:
+            return self.LANGUAGE_MAPPINGS[clean]
+        
+        lower = clean.lower()
+        # Try finding prefix or short code
+        for key, val in self.LANGUAGE_MAPPINGS.items():
+            k_prefix = key.split("-")[0].lower()
+            if lower == k_prefix or lower.startswith(k_prefix + "-") or lower == key.lower():
+                return val
+                
+        return self.LANGUAGE_MAPPINGS["hi-IN"]
+
+    def normalize_language_code(self, code: str) -> str:
+        """Returns the canonical locale code (e.g. 'ta' -> 'ta-IN')."""
+        info = self.get_language_info(code)
+        for key, val in self.LANGUAGE_MAPPINGS.items():
+            if val == info:
+                return key
+        return "hi-IN"
+
 settings = Settings()
+

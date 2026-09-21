@@ -17,10 +17,10 @@ export const AssistantPage = () => {
           </span>
           <span className="badge badge-success">Azure Speech & RAG</span>
         </div>
-        <h1 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem' }}>
+        <h1 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
           University Voice Assistant
         </h1>
-        <p style={{ fontSize: '0.875rem', color: '#64748B' }}>
+        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
           Speak or type to receive verified answers from official university ordinances.
         </p>
       </div>
@@ -37,13 +37,13 @@ export const AssistantPage = () => {
             justifyContent: 'space-between',
             marginBottom: '0.75rem',
             paddingBottom: '0.4rem',
-            borderBottom: '1px solid #E2E8F0',
+            borderBottom: '1px solid var(--border)',
           }}
         >
-          <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>
+          <h2 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>
             Conversation Stream
           </h2>
-          <span style={{ fontSize: '0.7rem', color: '#94A3B8' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
             Azure OpenAI & Search
           </span>
         </div>

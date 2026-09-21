@@ -110,7 +110,7 @@ export const AppProvider = ({ children }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             query: queryText,
-            language_code: lang.code,
+            language_code: lang.locale || lang.code,
             user_role: userRole,
             generate_audio: true,
           }),
@@ -146,10 +146,10 @@ export const AppProvider = ({ children }) => {
             accessLevel: 'public',
           })),
           trace: [
-            { step: 1, layer: 'STT', azureService: `Sarvam saaras:v3 (${lang.code})`, latencyMs: data.telemetry?.stt?.status_code === 200 ? 140 : 0, detail: `Transcribed to ${lang.name}`, status: 'completed' },
-            { step: 2, layer: 'Intent Guardrail', azureService: 'Intent Router', latencyMs: 2, detail: data.telemetry?.guardrail?.guardrail_status || 'PASSED_IN_SCOPE', status: 'completed' },
+            { step: 1, layer: 'STT', azureService: `Sarvam saaras:v3 (${lang.name})`, latencyMs: data.telemetry?.stt?.status_code === 200 ? 140 : 0, detail: `Transcribed to ${lang.name}`, status: 'completed' },
+            { step: 2, layer: 'Intent Guardrail', azureService: 'Azure OpenAI GPT-4.1-mini Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
             { step: 3, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
-            { step: 4, layer: 'TTS Synthesis', azureService: `Sarvam bulbul:v3 (${lang.code})`, latencyMs: data.telemetry?.tts?.status_code === 200 ? 180 : 0, detail: `Voice synthesized in ${lang.name}`, status: 'completed' },
+            { step: 4, layer: 'TTS Synthesis', azureService: `${data.telemetry?.tts?.provider || 'Dual TTS'} (${lang.name})`, latencyMs: data.telemetry?.tts?.status_code === 200 ? 180 : 0, detail: `Voice synthesized in ${lang.name}`, status: 'completed' },
           ],
           telemetry: data.telemetry,
         };
@@ -198,7 +198,7 @@ export const AppProvider = ({ children }) => {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
-      formData.append('language_code', selectedLanguage.code);
+      formData.append('language_code', selectedLanguage.locale || selectedLanguage.code);
 
       const sttResponse = await fetch(`${BACKEND_URL}/api/voice/stt`, {
         method: 'POST',
@@ -231,7 +231,7 @@ export const AppProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: transcribedText,
-          language_code: selectedLanguage.code,
+          language_code: selectedLanguage.locale || selectedLanguage.code,
           user_role: userRole,
           generate_audio: true,
         }),
@@ -258,10 +258,10 @@ export const AppProvider = ({ children }) => {
           accessLevel: 'public',
         })),
         trace: [
-          { step: 1, layer: 'STT', azureService: `Sarvam saaras:v2 (${selectedLanguage.code})`, latencyMs: 140, detail: `Transcribed: "${transcribedText}"`, status: 'completed' },
-          { step: 2, layer: 'Intent Guardrail', azureService: 'LLM Intent Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
+          { step: 1, layer: 'STT', azureService: `Sarvam saaras:v3 (${selectedLanguage.name})`, latencyMs: 140, detail: `Transcribed: "${transcribedText}"`, status: 'completed' },
+          { step: 2, layer: 'Intent Guardrail', azureService: 'Azure OpenAI GPT-4.1-mini Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
           { step: 3, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
-          { step: 4, layer: 'TTS Synthesis', azureService: `Sarvam bulbul:v2 (${selectedLanguage.code})`, latencyMs: 180, detail: `Voice synthesized in ${selectedLanguage.name}`, status: 'completed' },
+          { step: 4, layer: 'TTS Synthesis', azureService: `${data.telemetry?.tts?.provider || 'Dual TTS'} (${selectedLanguage.name})`, latencyMs: 180, detail: `Voice synthesized in ${selectedLanguage.name}`, status: 'completed' },
         ],
         telemetry: data.telemetry,
       };

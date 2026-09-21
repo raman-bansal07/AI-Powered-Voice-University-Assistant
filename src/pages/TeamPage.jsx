@@ -1,145 +1,178 @@
 import React from 'react';
 import { TEAM_MEMBERS, PROJECT_DETAILS } from '../data/teamData';
-import { Users, GraduationCap, Code2, ExternalLink } from 'lucide-react';
+import { GraduationCap, Code2, ExternalLink, Sparkles } from 'lucide-react';
+
+const ROLE_COLORS = {
+  'Lead AI & Cloud Architect':     { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.25)' },
+  'Full-Stack & Voice Integrator': { color: '#A78BFA', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
+  'Knowledge & Data Engineer':     { color: '#34D399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)' },
+  'Security & Cloud Engineer':     { color: '#FBBF24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.25)' },
+};
 
 export const TeamPage = () => {
   return (
-    <div className="container animate-fade-in" style={{ padding: '2rem 1rem 4rem 1rem' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '1.75rem', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '0.4rem' }}>
-          <span className="badge badge-azure">
-            <Users size={12} />
-            Capstone Team
-          </span>
-          <span className="badge badge-success">2025–2026</span>
+    <div className="animate-fade-in" style={{ padding: '3rem 0 6rem' }}>
+
+      {/* ── Header ── */}
+      <div style={{ textAlign: 'center', marginBottom: '3rem', padding: '0 1.5rem' }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(59,130,246,0.2)',
+          borderRadius: 20, padding: '4px 12px',
+          fontSize: '0.7rem', fontWeight: 700, color: '#60A5FA',
+          letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12,
+        }}>
+          <Sparkles size={10} /> Capstone Project · 2025–2026
         </div>
-        <h1 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 800, color: '#0F172A', marginBottom: '0.25rem' }}>
-          Authors & Engineering Team
+        <h1 style={{
+          fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 900,
+          color: 'var(--text-primary)', letterSpacing: '-0.04em',
+          marginBottom: 8, lineHeight: 1.1,
+        }}>
+          Engineering Team
         </h1>
-        <p style={{ fontSize: '0.875rem', color: '#64748B' }}>
-          {PROJECT_DETAILS.institution} • {PROJECT_DETAILS.department}
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: 6 }}>
+          {PROJECT_DETAILS.institution} &nbsp;·&nbsp; {PROJECT_DETAILS.department}
         </p>
       </div>
 
-      {/* Team Cards Grid */}
-      <div
-        style={{
+      {/* ── Team Cards ── */}
+      <div className="container">
+        <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
           gap: '1.25rem',
-          marginBottom: '2rem',
-        }}
-      >
-        {TEAM_MEMBERS.map((member) => (
-          <div
-            key={member.rollNo}
-            className="card card-hover"
-            style={{
-              padding: '1.5rem',
-              borderRadius: '14px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              backgroundColor: '#FFFFFF',
-            }}
-          >
-            {/* Avatar Circle */}
-            <div
-              style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: '50%',
-                backgroundColor: member.avatarBg,
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.1rem',
-                fontWeight: 800,
-                marginBottom: '0.75rem',
+          marginBottom: '2.5rem',
+        }}>
+          {TEAM_MEMBERS.map((member) => {
+            const roleStyle = ROLE_COLORS[member.role] || { color: '#60A5FA', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.25)' };
+            return (
+              <div key={member.rollNo} style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: 16,
+                padding: '1.75rem 1.5rem',
+                textAlign: 'center',
+                transition: 'all 0.22s ease',
+                position: 'relative', overflow: 'hidden',
               }}
-            >
-              {member.initials}
-            </div>
-
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: '1px' }}>
-              {member.name}
-            </h3>
-
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#0078D4', marginBottom: '0.2rem' }}>
-              Roll: {member.rollNo}
-            </div>
-
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
-              {member.role}
-            </div>
-
-            <p style={{ fontSize: '0.75rem', color: '#64748B', lineHeight: 1.45, marginBottom: '0.75rem' }}>
-              {member.bio}
-            </p>
-
-            {/* Social Links */}
-            <div style={{ display: 'flex', gap: '6px', marginTop: 'auto' }}>
-              <a
-                href={member.github}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-secondary btn-sm"
-                style={{ padding: '4px 8px', fontSize: '0.7rem' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = roleStyle.color + '60';
+                  e.currentTarget.style.boxShadow = `0 0 28px ${roleStyle.color}18`;
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
               >
-                <Code2 size={12} />
-                <span>GitHub</span>
-              </a>
-              <a
-                href={member.linkedin}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-secondary btn-sm"
-                style={{ padding: '4px 8px', fontSize: '0.7rem' }}
-              >
-                <ExternalLink size={12} />
-                <span>LinkedIn</span>
-              </a>
-            </div>
-          </div>
-        ))}
-      </div>
+                {/* Top accent bar */}
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+                  background: `linear-gradient(90deg, transparent, ${roleStyle.color}, transparent)`,
+                }} />
 
-      {/* Institutional Metadata Card */}
-      <div
-        className="card"
-        style={{
-          padding: '1.25rem 1.5rem',
-          borderRadius: '14px',
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.75rem' }}>
-          <GraduationCap size={18} color="#0078D4" />
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A' }}>
-            Capstone Project Details
-          </h3>
+                {/* Avatar */}
+                <div style={{
+                  width: 62, height: 62, borderRadius: '50%',
+                  background: member.avatarBg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.3rem', fontWeight: 900, color: '#fff',
+                  margin: '0.5rem auto 1rem',
+                  boxShadow: `0 6px 20px ${member.avatarBg}55`,
+                  border: `2px solid ${member.avatarBg}88`,
+                }}>
+                  {member.initials}
+                </div>
+
+                <div style={{ fontWeight: 800, fontSize: '1.0625rem', color: 'var(--text-primary)', marginBottom: 2 }}>
+                  {member.name}
+                </div>
+
+                <div style={{
+                  fontSize: '0.68rem', fontWeight: 700,
+                  color: roleStyle.color, marginBottom: 6,
+                  letterSpacing: '0.04em',
+                }}>
+                  {member.rollNo}
+                </div>
+
+                {/* Role badge */}
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  background: roleStyle.bg, border: `1px solid ${roleStyle.border}`,
+                  borderRadius: 20, padding: '3px 10px', marginBottom: 10,
+                  fontSize: '0.72rem', fontWeight: 700, color: roleStyle.color,
+                }}>
+                  {member.role}
+                </div>
+
+                <p style={{ fontSize: '0.775rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                  {member.bio}
+                </p>
+
+                {/* Social Links */}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <a href={member.github} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
+                    <Code2 size={12} /> GitHub
+                  </a>
+                  <a href={member.linkedin} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
+                    <ExternalLink size={12} /> LinkedIn
+                  </a>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.8125rem' }}>
-          <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748B' }}>INSTITUTION</div>
-            <div style={{ fontWeight: 600, color: '#0F172A' }}>{PROJECT_DETAILS.institution}</div>
+        {/* ── Project Details Card ── */}
+        <div style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: 14, padding: '1.5rem 2rem',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.25rem' }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <GraduationCap size={16} color="#3B82F6" />
+            </div>
+            <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)' }}>
+              Project Details
+            </span>
           </div>
-          <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748B' }}>DEPARTMENT</div>
-            <div style={{ fontWeight: 600, color: '#0F172A' }}>{PROJECT_DETAILS.department}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748B' }}>COURSE & YEAR</div>
-            <div style={{ fontWeight: 600, color: '#0F172A' }}>{PROJECT_DETAILS.course} • {PROJECT_DETAILS.academicYear}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748B' }}>PROJECT MENTOR / GUIDE</div>
-            <div style={{ fontWeight: 600, color: '#0078D4' }}>{PROJECT_DETAILS.professor}</div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '1.5rem',
+          }}>
+            {[
+              { label: 'INSTITUTION',    value: PROJECT_DETAILS.institution },
+              { label: 'DEPARTMENT',     value: PROJECT_DETAILS.department },
+              { label: 'COURSE & YEAR',  value: `${PROJECT_DETAILS.course} · ${PROJECT_DETAILS.academicYear}` },
+              { label: 'PROJECT MENTOR', value: PROJECT_DETAILS.professor, highlight: true },
+            ].map(({ label, value, highlight }) => (
+              <div key={label}>
+                <div style={{
+                  fontSize: '0.62rem', fontWeight: 800,
+                  color: 'var(--text-muted)', letterSpacing: '0.1em',
+                  textTransform: 'uppercase', marginBottom: 5,
+                }}>
+                  {label}
+                </div>
+                <div style={{
+                  fontSize: '0.875rem', fontWeight: 600,
+                  color: highlight ? '#60A5FA' : 'var(--text-primary)',
+                  lineHeight: 1.4,
+                }}>
+                  {value}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

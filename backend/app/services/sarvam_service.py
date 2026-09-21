@@ -27,7 +27,7 @@ async def transcribe_audio_sarvam(
     }
     
     # Map language code to Sarvam supported codes
-    lang_info = settings.LANGUAGE_MAPPINGS.get(language_code, settings.LANGUAGE_MAPPINGS["hi-IN"])
+    lang_info = settings.get_language_info(language_code)
     sarvam_lang = lang_info.get("sarvam_stt_code", "hi-IN")
     
     data = {
@@ -36,8 +36,18 @@ async def transcribe_audio_sarvam(
         "with_diarization": "false"
     }
     
+    # Auto-detect audio mime-type
+    content_type = "audio/wav"
+    lower_fn = filename.lower()
+    if lower_fn.endswith(".webm"):
+        content_type = "audio/webm"
+    elif lower_fn.endswith(".ogg") or lower_fn.endswith(".opus"):
+        content_type = "audio/ogg"
+    elif lower_fn.endswith(".mp3"):
+        content_type = "audio/mp3"
+        
     files = {
-        "file": (filename, audio_bytes, "audio/wav")
+        "file": (filename, audio_bytes, content_type)
     }
     
     try:
@@ -84,16 +94,16 @@ async def synthesize_speech_sarvam(
     speaker: Optional[str] = None
 ) -> Tuple[Optional[str], Dict[str, Any]]:
     """
-    Synthesizes Indian language text into spoken audio (base64) using Sarvam AI bulbul:v2.
+    Synthesizes Indian language text into spoken audio (base64) using Sarvam AI bulbul:v3.
     """
     headers = {
         "api-subscription-key": settings.SARVAM_API_KEY,
         "Content-Type": "application/json"
     }
     
-    lang_info = settings.LANGUAGE_MAPPINGS.get(language_code, settings.LANGUAGE_MAPPINGS["hi-IN"])
+    lang_info = settings.get_language_info(language_code)
     target_lang = lang_info.get("sarvam_tts_code", "hi-IN")
-    speaker_profile = speaker or lang_info.get("sarvam_speaker", "ananya")
+    speaker_profile = speaker or lang_info.get("sarvam_speaker", "priya")
     
     # Truncate for audio length safety if needed
     cleaned_text = text[:490].strip()

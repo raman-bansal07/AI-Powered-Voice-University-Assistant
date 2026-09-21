@@ -42,13 +42,14 @@ async def generate_azure_openai_response(
         logger.warning("Azure OpenAI not configured — using hardcoded fallback")
         return None
 
-    lang_info = settings.LANGUAGE_MAPPINGS.get(language_code, settings.LANGUAGE_MAPPINGS["en-IN"])
+    lang_info = settings.get_language_info(language_code)
     lang_name = lang_info.get("name", "English (India)")
+    lang_native = lang_info.get("native", "")
 
     url = (
         f"{settings.AZURE_OPENAI_ENDPOINT.rstrip('/')}"
         f"/openai/deployments/{settings.AZURE_OPENAI_DEPLOYMENT}"
-        f"/chat/completions?api-version=2024-02-15-preview"
+        f"/chat/completions?api-version=2024-08-01-preview"
     )
 
     headers = {
@@ -59,8 +60,8 @@ async def generate_azure_openai_response(
     user_message = (
         f"Student Query: {query}\n\n"
         f"Retrieved University Data (from tool: {tool_name}):\n{context_data}\n\n"
-        f"Instruction: Respond to the student query in {lang_name} language only. "
-        f"Be concise (2-3 sentences) and warm. Ground answer strictly in the data above."
+        f"Instruction: Respond to the student query in {lang_name} ({lang_native}) language only, written in its native script. "
+        f"Be concise (2-3 sentences maximum, for spoken voice output) and warm. Ground answer strictly in the data above."
     )
 
     payload = {
@@ -69,7 +70,7 @@ async def generate_azure_openai_response(
             {"role": "user", "content": user_message}
         ],
         "max_tokens": 280,
-        "temperature": 0.6,
+        "temperature": 0.5,
         "top_p": 0.9
     }
 

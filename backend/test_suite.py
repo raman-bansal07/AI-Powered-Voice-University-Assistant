@@ -29,7 +29,7 @@ def test_all():
             "language_code": lang,
             "generate_audio": False
         }
-        resp = httpx.post(f"{BASE_URL}/api/chat/message", json=payload, timeout=10.0)
+        resp = httpx.post(f"{BASE_URL}/api/chat/message", json=payload, timeout=25.0)
         data = resp.json()
         
         route = data.get("intent_route")

@@ -30,8 +30,35 @@ export const ConversationFeed = () => {
     setExecutedActions((prev) => ({ ...prev, [actionId]: true }));
   };
 
+  // IDs of the initial mock messages
+  const MOCK_IDS = new Set(['msg-1-init-ast', 'msg-2-user', 'msg-3-ast']);
+  const hasRealMessages = messages.some(m => !MOCK_IDS.has(m.id));
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+      {/* Demo preview banner — shown only while still on mock messages */}
+      {!hasRealMessages && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'rgba(251,191,36,0.08)',
+          border: '1px solid rgba(251,191,36,0.25)',
+          borderRadius: 10, padding: '10px 14px',
+        }}>
+          <span style={{ fontSize: 16 }}>💡</span>
+          <div>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FBBF24' }}>Example Preview</span>
+            <span style={{ fontSize: '0.78rem', color: '#8B9CC8', marginLeft: 8 }}>
+              This is a demo conversation. Tap the mic or type a question to start a real session.
+            </span>
+          </div>
+          <span style={{
+            marginLeft: 'auto', fontSize: '0.65rem', fontWeight: 700,
+            color: '#FBBF24', background: 'rgba(251,191,36,0.15)',
+            border: '1px solid rgba(251,191,36,0.3)',
+            borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap',
+          }}>DEMO</span>
+        </div>
+      )}
       {messages.map((msg) => {
         const isAssistant = msg.sender === 'assistant';
         const isTraceOpen = !!expandedTraces[msg.id];
@@ -45,8 +72,8 @@ export const ConversationFeed = () => {
               alignItems: 'flex-start',
               padding: '1.25rem',
               borderRadius: '12px',
-              backgroundColor: isAssistant ? '#FFFFFF' : '#F1F5F9',
-              border: isAssistant ? '1px solid #E2E8F0' : '1px solid #CBD5E1',
+              backgroundColor: isAssistant ? 'var(--bg-card)' : 'var(--bg-card-2)',
+              border: isAssistant ? '1px solid var(--border-bright)' : '1px solid var(--border)',
               boxShadow: isAssistant ? 'var(--shadow-sm)' : 'none',
             }}
           >
@@ -56,7 +83,7 @@ export const ConversationFeed = () => {
                 width: '36px',
                 height: '36px',
                 borderRadius: '8px',
-                backgroundColor: isAssistant ? '#0078D4' : '#334155',
+                backgroundColor: isAssistant ? 'var(--blue-600)' : 'var(--bg-muted)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -81,10 +108,10 @@ export const ConversationFeed = () => {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#0F172A' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                     {isAssistant ? 'UnivAI Assistant (Microsoft Azure)' : 'Student Voice Query'}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B' }}>{msg.timestamp}</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{msg.timestamp}</span>
                 </div>
 
                 {/* Badges */}
@@ -139,7 +166,7 @@ export const ConversationFeed = () => {
                 style={{
                   fontSize: '0.9375rem',
                   lineHeight: 1.6,
-                  color: msg.isErrorFallback ? '#991B1B' : '#1E293B',
+                  color: msg.isErrorFallback ? 'var(--error-text)' : 'var(--text-primary)',
                   whiteSpace: 'pre-wrap',
                   marginBottom: isAssistant && (msg.citations || msg.actions || msg.trace) ? '1rem' : '0',
                 }}
@@ -254,9 +281,9 @@ export const ConversationFeed = () => {
                       style={{
                         marginTop: '0.5rem',
                         padding: '0.75rem',
-                        backgroundColor: '#0F172A',
+                        backgroundColor: 'var(--bg-body)',
                         borderRadius: '8px',
-                        color: '#E2E8F0',
+                        color: 'var(--text-primary)',
                         fontSize: '0.75rem',
                         fontFamily: 'var(--font-mono)',
                       }}
