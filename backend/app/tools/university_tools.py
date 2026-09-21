@@ -10,6 +10,72 @@ from app.tools.mock_db import (
     FACULTY_DIRECTORY_DB,
     FEE_DEADLINES_DB
 )
+from app.config import settings
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorizedQuery
+import httpx
+import logging
+
+logger = logging.getLogger(__name__)
+
+async def get_embeddings_sync(text: str) -> List[float]:
+    """Helper to get embeddings synchronously for the search tool."""
+    deployment = getattr(settings, "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small")
+    url = f"{settings.AZURE_OPENAI_ENDPOINT.rstrip('/')}/openai/deployments/{deployment}/embeddings?api-version=2024-02-15-preview"
+    headers = {"api-key": settings.AZURE_OPENAI_API_KEY, "Content-Type": "application/json"}
+    payload = {"input": text}
+    
+    async with httpx.AsyncClient() as client:
+        r = await client.post(url, headers=headers, json=payload, timeout=20.0)
+        r.raise_for_status()
+        return r.json()["data"][0]["embedding"]
+
+async def search_official_documents(query: str) -> Dict[str, Any]:
+    """
+    Searches official uploaded PDFs in Azure AI Search using Hybrid Vector Search.
+    Use this tool to find rules, policies, or information from uploaded circulars.
+    """
+    try:
+        vector = await get_embeddings_sync(query)
+        
+        credential = AzureKeyCredential(settings.AZURE_SEARCH_API_KEY)
+        search_client = SearchClient(
+            endpoint=settings.AZURE_SEARCH_ENDPOINT, 
+            index_name=settings.AZURE_SEARCH_INDEX_NAME, 
+            credential=credential
+        )
+        
+        vector_query = VectorizedQuery(
+            vector=vector, k_nearest_neighbors=3, fields="content_vector"
+        )
+        
+        results = search_client.search(
+            search_text=query,
+            vector_queries=[vector_query],
+            top=3
+        )
+        
+        chunks = []
+        for result in results:
+            chunks.append({
+                "source": result.get("source_file", "Unknown"),
+                "content": result["content"]
+            })
+            
+        return {
+            "tool": "search_official_documents",
+            "status": "success" if chunks else "not_found",
+            "query": query,
+            "results": chunks
+        }
+    except Exception as e:
+        logger.error(f"Search failed: {e}")
+        return {
+            "tool": "search_official_documents",
+            "status": "error",
+            "message": "Failed to connect to Azure AI Search or index is empty."
+        }
 
 def get_university_overview_and_ranking(topic: Optional[str] = None) -> Dict[str, Any]:
     """

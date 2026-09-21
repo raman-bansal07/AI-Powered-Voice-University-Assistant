@@ -40,7 +40,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "hi-IN",
             "sarvam_tts_code": "hi-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "hi-IN-SwaraNeural"
+            "azure_voice": "hi-IN-MadhurNeural"
         },
         "en-IN": {
             "name": "English (India)",
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "en-IN",
             "sarvam_tts_code": "en-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "en-IN-NeerjaNeural"
+            "azure_voice": "en-IN-PrabhatNeural"
         },
         "ta-IN": {
             "name": "Tamil",
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "ta-IN",
             "sarvam_tts_code": "ta-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "ta-IN-PallaviNeural"
+            "azure_voice": "ta-IN-ValluvarNeural"
         },
         "te-IN": {
             "name": "Telugu",
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "te-IN",
             "sarvam_tts_code": "te-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "te-IN-ShrutiNeural"
+            "azure_voice": "te-IN-MohanNeural"
         },
         "mr-IN": {
             "name": "Marathi",

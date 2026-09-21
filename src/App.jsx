@@ -7,6 +7,7 @@ import { AssistantPage } from './pages/AssistantPage';
 import { ArchitecturePage } from './pages/ArchitecturePage';
 import { TechnologyPage } from './pages/TechnologyPage';
 import { TeamPage } from './pages/TeamPage';
+import { AdminPage } from './pages/AdminPage';
 
 const AppRouter = () => {
   const { currentRoute } = useApp();
@@ -18,6 +19,7 @@ const AppRouter = () => {
       {currentRoute === 'architecture' && <ArchitecturePage />}
       {currentRoute === 'technology'   && <TechnologyPage />}
       {currentRoute === 'team'         && <TeamPage />}
+      {currentRoute === 'admin'        && <AdminPage />}
     </main>
   );
 };

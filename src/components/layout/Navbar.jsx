@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { INDIAN_LANGUAGES } from '../../data/indianLanguages';
 import {
   Bot, Layers, Cpu, Users, Globe, UserCheck,
-  Menu, X, ChevronDown, LayoutDashboard,
+  Menu, X, ChevronDown, LayoutDashboard, Shield, LogOut
 } from 'lucide-react';
 
 // ── Custom logo SVG ──────────────────────────────────────────────
@@ -24,17 +24,23 @@ const LogoMark = ({ size = 22 }) => (
 );
 
 export const Navbar = () => {
-  const { currentRoute, navigateTo, selectedLanguage, setSelectedLanguageCode, userRole, setUserRole } = useApp();
+  const { currentRoute, navigateTo, selectedLanguage, setSelectedLanguageCode, userRole, setUserRole, isAdminAuthenticated, adminLogin, adminLogout } = useApp();
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const langRef = useRef(null);
   const roleRef = useRef(null);
+  const adminRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
       if (langRef.current && !langRef.current.contains(e.target)) setIsLangMenuOpen(false);
       if (roleRef.current && !roleRef.current.contains(e.target)) setIsRoleMenuOpen(false);
+      if (adminRef.current && !adminRef.current.contains(e.target)) setIsAdminMenuOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -209,6 +215,89 @@ export const Navbar = () => {
                     </button>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Admin panel */}
+          <div ref={adminRef} style={{ position: 'relative' }}>
+            {isAdminAuthenticated ? (
+              <button
+                className={`btn btn-secondary btn-sm ${currentRoute === 'admin' ? 'active' : ''}`}
+                onClick={() => navigateTo('admin')}
+                style={{ gap: 5, borderColor: currentRoute === 'admin' ? '#F59E0B' : 'rgba(245, 158, 11, 0.2)' }}
+              >
+                <Shield size={13} color="#F59E0B" />
+                <span style={{ fontWeight: 600, color: '#FDE68A' }}>Admin</span>
+              </button>
+            ) : (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => { setIsAdminMenuOpen(!isAdminMenuOpen); setIsRoleMenuOpen(false); setIsLangMenuOpen(false); setLoginError(''); }}
+                style={{ gap: 5 }}
+              >
+                <Shield size={13} color="#9CA3AF" />
+                <span style={{ fontWeight: 600, color: '#E8EEFF' }}>Login</span>
+              </button>
+            )}
+
+            {isAdminMenuOpen && !isAdminAuthenticated && (
+              <div style={{ ...dropdownStyle, width: 260, right: 0 }}>
+                <div style={dropHeaderStyle}>Admin Login</div>
+                <div style={{ padding: '10px 10px 5px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={loginEmail}
+                    onChange={e => setLoginEmail(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 12px', borderRadius: 6,
+                      background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'white', fontSize: 13, outline: 'none'
+                    }}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={loginPassword}
+                    onChange={e => setLoginPassword(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 12px', borderRadius: 6,
+                      background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'white', fontSize: 13, outline: 'none'
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const success = adminLogin(loginEmail, loginPassword);
+                        if (success) {
+                          setIsAdminMenuOpen(false);
+                          navigateTo('admin');
+                        } else {
+                          setLoginError('Invalid credentials');
+                        }
+                      }
+                    }}
+                  />
+                  {loginError && <div style={{ color: '#EF4444', fontSize: 11, textAlign: 'center' }}>{loginError}</div>}
+                  <button
+                    onClick={() => {
+                      const success = adminLogin(loginEmail, loginPassword);
+                      if (success) {
+                        setIsAdminMenuOpen(false);
+                        navigateTo('admin');
+                      } else {
+                        setLoginError('Invalid credentials');
+                      }
+                    }}
+                    style={{
+                      width: '100%', padding: '8px', borderRadius: 6,
+                      background: '#F59E0B', color: 'black', fontWeight: 700,
+                      border: 'none', cursor: 'pointer', fontSize: 13, marginTop: 4
+                    }}
+                  >
+                    Login
+                  </button>
+                </div>
               </div>
             )}
           </div>

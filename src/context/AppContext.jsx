@@ -16,12 +16,13 @@ export const AppProvider = ({ children }) => {
   const [activeKnowledgeDoc, setActiveKnowledgeDoc] = useState(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [playbackAudioText, setPlaybackAudioText] = useState(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   // Sync hash with route if available
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#/', '').replace('#', '');
-      const validRoutes = ['about', 'assistant', 'architecture', 'knowledge', 'technology', 'security', 'team'];
+      const validRoutes = ['about', 'assistant', 'architecture', 'knowledge', 'technology', 'security', 'team', 'admin'];
       if (validRoutes.includes(hash)) {
         setCurrentRoute(hash);
       }
@@ -42,8 +43,27 @@ export const AppProvider = ({ children }) => {
     setSelectedLanguage(found);
   };
 
+  const adminLogin = (email, password) => {
+    if (email === 'admin@gmail.com' && password === 'admin123') {
+      setIsAdminAuthenticated(true);
+      return true;
+    }
+    return false;
+  };
+
+  const adminLogout = () => {
+    setIsAdminAuthenticated(false);
+    navigateTo('about');
+  };
+
   const addMessage = (message) => {
-    setMessages((prev) => [...prev, message]);
+    setMessages((prev) => {
+      let realMessages = prev.filter(m => !INITIAL_CONVERSATION.find(initM => initM.id === m.id));
+      if (message.sender === 'user' && realMessages.length >= 6) {
+        realMessages = [];
+      }
+      return [...realMessages, message];
+    });
   };
 
   const resetConversation = () => {
@@ -193,12 +213,13 @@ export const AppProvider = ({ children }) => {
     }, 900);
   };
 
-  const processVoiceAudio = async (audioBlob) => {
+  const processVoiceAudio = async (audioBlob, provider = 'sarvam') => {
     setVoiceState('transcribing');
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
       formData.append('language_code', selectedLanguage.locale || selectedLanguage.code);
+      formData.append('provider', provider);
 
       const sttResponse = await fetch(`${BACKEND_URL}/api/voice/stt`, {
         method: 'POST',
@@ -234,6 +255,7 @@ export const AppProvider = ({ children }) => {
           language_code: selectedLanguage.locale || selectedLanguage.code,
           user_role: userRole,
           generate_audio: true,
+          provider: provider,
         }),
       });
 
@@ -322,6 +344,9 @@ export const AppProvider = ({ children }) => {
         setPlaybackAudioText,
         triggerVoiceQuerySimulation,
         processVoiceAudio,
+        isAdminAuthenticated,
+        adminLogin,
+        adminLogout,
       }}
     >
       {children}

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 
-from app.routers import chat, voice, tools
+from app.routers import chat, voice, tools, documents
 from app.config import settings
 
 # Configure structured logging
@@ -53,6 +53,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(chat.router)
 app.include_router(voice.router)
 app.include_router(tools.router)
+app.include_router(documents.router)
 
 @app.get("/")
 def root():

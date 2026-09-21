@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.config import settings
 from app.services.sarvam_service import transcribe_audio_sarvam
+from app.services.azure_speech_service import transcribe_audio_azure
 from app.services.agent_service import synthesize_speech_dual
 
 router = APIRouter(prefix="/api/voice", tags=["Direct Voice Testing"])
@@ -19,7 +20,8 @@ class TTSRequest(BaseModel):
 @router.post("/stt")
 async def standalone_stt(
     audio: UploadFile = File(..., alias="audio"),
-    language_code: str = Form("hi-IN")
+    language_code: str = Form("hi-IN"),
+    provider: str = Form("sarvam")
 ):
     """Direct STT transcription endpoint"""
     audio_bytes = await audio.read()
@@ -32,11 +34,17 @@ async def standalone_stt(
         safe_filename = "recording.webm"
         
     canonical_lang = settings.normalize_language_code(language_code)
-    transcript, telemetry = await transcribe_audio_sarvam(
-        audio_bytes=audio_bytes,
-        filename=safe_filename,
-        language_code=canonical_lang
-    )
+    if provider == "azure":
+        transcript, telemetry = await transcribe_audio_azure(
+            audio_bytes=audio_bytes,
+            language_code=canonical_lang
+        )
+    else:
+        transcript, telemetry = await transcribe_audio_sarvam(
+            audio_bytes=audio_bytes,
+            filename=safe_filename,
+            language_code=canonical_lang
+        )
     return {
         "transcript": transcript,
         "language_code": canonical_lang,

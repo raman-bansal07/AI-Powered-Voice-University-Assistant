@@ -69,12 +69,21 @@ async def translate_query_to_english(query: str, lang_code: str) -> str:
 
 async def synthesize_speech_dual(
     text: str,
-    canonical_lang: str
+    canonical_lang: str,
+    provider: str = "sarvam"
 ):
     """
     Dual-engine speech synthesis:
     Tries Sarvam AI first; if it returns no audio or fails, automatically falls back to Azure AI Speech.
     """
+    if provider == "azure":
+        try:
+            audio_base64, tts_telemetry = await synthesize_speech_azure(text, canonical_lang)
+            return audio_base64, tts_telemetry
+        except Exception as e:
+            logger.error(f"Azure Speech TTS attempt failed: {e}")
+            return None, {"provider": "Dual TTS", "status": "failed", "error": str(e)}
+
     # 1. Try Sarvam AI first
     try:
         audio_base64, tts_telemetry = await synthesize_speech_sarvam(text, canonical_lang)
@@ -96,7 +105,8 @@ async def process_user_query(
     query_text: str,
     language_code: str = "hi-IN",
     user_role: str = "student",
-    generate_audio: bool = True
+    generate_audio: bool = True,
+    provider: str = "sarvam"
 ) -> Dict[str, Any]:
     """
     Full pipeline processing:
@@ -127,7 +137,7 @@ async def process_user_query(
         audio_base64 = None
         tts_telemetry = {}
         if generate_audio:
-            audio_base64, tts_telemetry = await synthesize_speech_dual(redirect_msg, canonical_lang)
+            audio_base64, tts_telemetry = await synthesize_speech_dual(redirect_msg, canonical_lang, provider)
             
         elapsed_ms = int((time.time() - start_time) * 1000)
         return {
@@ -374,7 +384,7 @@ async def process_user_query(
     audio_base64 = None
     tts_telemetry = {}
     if generate_audio and response_text:
-        audio_base64, tts_telemetry = await synthesize_speech_dual(response_text, canonical_lang)
+        audio_base64, tts_telemetry = await synthesize_speech_dual(response_text, canonical_lang, provider)
         
     elapsed_ms = int((time.time() - start_time) * 1000)
     

@@ -27,6 +27,10 @@ export const VoiceController = () => {
   const [inputMode, setInputMode] = useState('voice');
   const [isRecording, setIsRecording] = useState(false);
   const [micError, setMicError] = useState(null);
+  
+  // New state for Provider Selection Modal
+  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [pendingAudioBlob, setPendingAudioBlob] = useState(null);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -68,8 +72,11 @@ export const VoiceController = () => {
         });
         audioChunksRef.current = [];
 
-        // Hand the recorded blob to the real STT pipeline
-        await processVoiceAudio(audioBlob);
+        // Instead of calling processVoiceAudio immediately, show provider selection modal
+        setPendingAudioBlob(audioBlob);
+        setShowProviderModal(true);
+        // Reset listening state for the UI until a provider is selected
+        setVoiceState('idle');
       };
 
       recorder.start();

@@ -7,8 +7,9 @@ import base64
 from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
-from app.services.agent_service import process_user_query
 from app.services.sarvam_service import transcribe_audio_sarvam
+from app.services.azure_speech_service import transcribe_audio_azure
+from app.services.agent_service import process_user_query
 
 router = APIRouter(prefix="/api/chat", tags=["Chat & Voice Assistant"])
 
@@ -17,6 +18,7 @@ class TextQueryRequest(BaseModel):
     language_code: Optional[str] = "hi-IN"
     user_role: Optional[str] = "student"
     generate_audio: Optional[bool] = True
+    provider: Optional[str] = "sarvam"
 
 @router.post("/message")
 async def chat_message_endpoint(req: TextQueryRequest):
@@ -31,7 +33,8 @@ async def chat_message_endpoint(req: TextQueryRequest):
         query_text=req.query,
         language_code=req.language_code or "hi-IN",
         user_role=req.user_role or "student",
-        generate_audio=req.generate_audio if req.generate_audio is not None else True
+        generate_audio=req.generate_audio if req.generate_audio is not None else True,
+        provider=req.provider or "sarvam"
     )
     return result
 
@@ -53,7 +56,8 @@ async def voice_chat_endpoint(
     audio: UploadFile = File(...),
     language_code: str = Form("hi-IN"),
     user_role: str = Form("student"),
-    generate_audio: bool = Form(True)
+    generate_audio: bool = Form(True),
+    provider: str = Form("sarvam")
 ):
     """
     Direct voice upload endpoint.
@@ -67,12 +71,18 @@ async def voice_chat_endpoint(
     if not any(safe_filename.endswith(ext) for ext in [".wav", ".mp3", ".webm", ".ogg", ".m4a"]):
         safe_filename = "recording.webm"
 
-    # Transcribe audio using Sarvam STT
-    transcript, stt_telemetry = await transcribe_audio_sarvam(
-        audio_bytes=audio_bytes,
-        filename=safe_filename,
-        language_code=language_code
-    )
+    # Transcribe audio
+    if provider == "azure":
+        transcript, stt_telemetry = await transcribe_audio_azure(
+            audio_bytes=audio_bytes,
+            language_code=language_code
+        )
+    else:
+        transcript, stt_telemetry = await transcribe_audio_sarvam(
+            audio_bytes=audio_bytes,
+            filename=safe_filename,
+            language_code=language_code
+        )
     
     if not transcript:
         from app.config import settings
@@ -84,7 +94,7 @@ async def voice_chat_endpoint(
         audio_b64 = None
         tts_telem = {}
         if generate_audio:
-            audio_b64, tts_telem = await synthesize_speech_dual(polite_msg, canonical_lang)
+            audio_b64, tts_telem = await synthesize_speech_dual(polite_msg, canonical_lang, provider)
             
         return {
             "status": "warning",
@@ -107,7 +117,8 @@ async def voice_chat_endpoint(
         query_text=transcript,
         language_code=language_code,
         user_role=user_role,
-        generate_audio=generate_audio
+        generate_audio=generate_audio,
+        provider=provider
     )
     result["transcription"] = transcript
     result["telemetry"]["stt"] = stt_telemetry

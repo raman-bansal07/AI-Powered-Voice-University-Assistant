@@ -68,53 +68,54 @@ def _search_local(query: str, top_k: int = 2) -> List[Dict[str, Any]]:
 
 async def _search_azure(query: str, top_k: int = 2) -> List[Dict[str, Any]]:
     """
-    Retrieves documents from Azure AI Search index (university-rulebook).
+    Retrieves documents from Azure AI Search index (university-rulebook) using Hybrid Vector Search.
     """
+    from azure.core.credentials import AzureKeyCredential
+    from azure.search.documents import SearchClient
+    from azure.search.documents.models import VectorizedQuery
+    from app.services.rag_ingestion import get_embeddings
+    
     if not settings.AZURE_SEARCH_API_KEY or not settings.AZURE_SEARCH_ENDPOINT:
         return []
 
-    url = (
-        f"{settings.AZURE_SEARCH_ENDPOINT.rstrip('/')}"
-        f"/indexes/{settings.AZURE_SEARCH_INDEX_NAME}/docs/search"
-        f"?api-version=2024-07-01"
-    )
-
-    headers = {
-        "api-key": settings.AZURE_SEARCH_API_KEY,
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "search": query,
-        "top": top_k,
-        "queryType": "simple",
-        "searchMode": "any",
-        "select": "id,title,section,category,content"
-    }
-
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            if response.status_code == 200:
-                data = response.json()
-                results = []
-                for item in data.get("value", []):
-                    results.append({
-                        "doc_id": item.get("id", "az-unknown"),
-                        "title": item.get("title", ""),
-                        "section": item.get("section", ""),
-                        "category": item.get("category", ""),
-                        "content": item.get("content", ""),
-                        "relevance_score": round(min(item.get("@search.score", 0) / 10.0, 0.99), 3),
-                        "source": "azure_ai_search"
-                    })
-                logger.info(f"Azure AI Search returned {len(results)} results")
-                return results
-            else:
-                logger.warning(f"Azure Search HTTP {response.status_code}: {response.text[:200]}")
-                return []
+        # Get the query vector
+        vector = await get_embeddings(query)
+        
+        credential = AzureKeyCredential(settings.AZURE_SEARCH_API_KEY)
+        search_client = SearchClient(
+            endpoint=settings.AZURE_SEARCH_ENDPOINT, 
+            index_name=settings.AZURE_SEARCH_INDEX_NAME, 
+            credential=credential
+        )
+        
+        vector_query = VectorizedQuery(
+            vector=vector, k_nearest_neighbors=top_k, fields="content_vector"
+        )
+        
+        # Hybrid Search (Keyword + Vector)
+        results = search_client.search(
+            search_text=query,
+            vector_queries=[vector_query],
+            top=top_k
+        )
+        
+        docs = []
+        for item in results:
+            docs.append({
+                "doc_id": item.get("id", "az-unknown"),
+                "title": item.get("source_file", "Uploaded Document"),
+                "section": "Uploaded Document",
+                "category": "Official Circular",
+                "content": item.get("content", ""),
+                "relevance_score": round(min(item.get("@search.score", 0) / 10.0, 0.99), 3),
+                "source": "azure_ai_search_vector"
+            })
+            
+        logger.info(f"Azure AI Vector Search returned {len(docs)} results")
+        return docs
     except Exception as ex:
-        logger.error(f"Azure Search exception: {str(ex)}")
+        logger.error(f"Azure Vector Search exception: {str(ex)}")
         return []
 
 
