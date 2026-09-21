@@ -10,6 +10,8 @@ import {
   Volume2,
   RefreshCw,
   Sliders,
+  Zap,
+  Cloud,
 } from 'lucide-react';
 
 export const VoiceController = () => {
@@ -27,6 +29,11 @@ export const VoiceController = () => {
   const [inputMode, setInputMode] = useState('voice');
   const [isRecording, setIsRecording] = useState(false);
   const [micError, setMicError] = useState(null);
+
+  // Provider Modal state
+  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [pendingAudioBlob, setPendingAudioBlob] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState(null);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -68,8 +75,11 @@ export const VoiceController = () => {
         });
         audioChunksRef.current = [];
 
-        // Hand the recorded blob to the real STT pipeline
-        await processVoiceAudio(audioBlob);
+        // Store blob and show provider selection modal
+        setPendingAudioBlob(audioBlob);
+        setSelectedProvider(null);
+        setShowProviderModal(true);
+        setVoiceState('idle'); // reset while modal is open
       };
 
       recorder.start();
@@ -83,6 +93,21 @@ export const VoiceController = () => {
           : `Could not access microphone: ${err.message}`
       );
     }
+  };
+
+  const handleProviderSelect = async (provider) => {
+    setShowProviderModal(false);
+    setSelectedProvider(provider);
+    if (pendingAudioBlob) {
+      await processVoiceAudio(pendingAudioBlob, provider);
+      setPendingAudioBlob(null);
+    }
+  };
+
+  const handleModalClose = () => {
+    setShowProviderModal(false);
+    setPendingAudioBlob(null);
+    setVoiceState('idle');
   };
 
   const handleTextSubmit = (e) => {
@@ -108,13 +133,13 @@ export const VoiceController = () => {
 
   // Status label
   const statusLabel = isRecording
-    ? `🔴 Recording ${selectedLanguage.name}… Click mic to stop`
+    ? `Recording ${selectedLanguage.name}... Click mic to stop`
     : voiceState === 'transcribing'
-    ? 'Azure Speech-to-Text Transcribing...'
+    ? 'Transcribing with Sarvam saaras:v3...'
     : voiceState === 'reasoning'
     ? 'Azure OpenAI Reasoning & RAG Retrieval...'
     : voiceState === 'speaking'
-    ? 'Azure Neural TTS Speaking...'
+    ? `Speaking via ${selectedProvider === 'azure' ? 'Azure Neural TTS' : 'Sarvam bulbul:v3'}...`
     : 'Voice Ready (Azure AI Speech)';
 
   return (
@@ -128,6 +153,7 @@ export const VoiceController = () => {
         padding: '2rem',
         marginBottom: '2rem',
         borderRadius: '16px',
+        position: 'relative',
       }}
     >
       {/* Top Header */}
@@ -195,7 +221,7 @@ export const VoiceController = () => {
       {/* Language Dropdown */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 10 }}>
         <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
-          🌐 Language
+          Language
         </label>
         <select
           value={selectedLanguage.code}
@@ -314,7 +340,7 @@ export const VoiceController = () => {
                 textAlign: 'center',
               }}
             >
-              ⚠️ {micError}
+              {micError}
             </div>
           )}
         </div>
@@ -340,6 +366,150 @@ export const VoiceController = () => {
           </button>
         </form>
       )}
+
+      {/* ===================== PROVIDER SELECTION MODAL ===================== */}
+      {showProviderModal && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(5, 8, 16, 0.85)',
+            backdropFilter: 'blur(8px)',
+            borderRadius: '16px',
+            animation: 'fadeIn 0.2s ease',
+          }}
+          onClick={handleModalClose}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(135deg, #0F1B35 0%, #1A2C50 100%)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '24px',
+              padding: '2.5rem 2rem',
+              maxWidth: '440px',
+              width: '90%',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,120,212,0.2)',
+              animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+              <div style={{
+                width: 56, height: 56,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0078D4, #00BCF2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 1rem',
+                boxShadow: '0 0 24px rgba(0,120,212,0.4)',
+              }}>
+                <Volume2 size={26} color="#fff" />
+              </div>
+              <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                Choose Voice Engine
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                Select which AI will respond to your voice query.
+                <br />Your speech has been captured successfully!
+              </p>
+            </div>
+
+            {/* Provider Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+              {/* Sarvam AI Button */}
+              <button
+                id="provider-sarvam-btn"
+                onClick={() => handleProviderSelect('sarvam')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.25rem',
+                  background: 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(109,40,217,0.3))',
+                  border: '1px solid rgba(139,92,246,0.5)',
+                  borderRadius: '14px', cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139,92,246,0.35), rgba(109,40,217,0.45))'; e.currentTarget.style.transform = 'scale(1.02)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(139,92,246,0.2), rgba(109,40,217,0.3))'; e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: '12px', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Zap size={22} color="#fff" />
+                </div>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
+                    Sarvam AI  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>bulbul:v3</span>
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+                    Indian languages specialist · Female voice
+                  </div>
+                </div>
+              </button>
+
+              {/* Azure AI Speech Button */}
+              <button
+                id="provider-azure-btn"
+                onClick={() => handleProviderSelect('azure')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1rem 1.25rem',
+                  background: 'linear-gradient(135deg, rgba(0,120,212,0.2), rgba(0,188,242,0.3))',
+                  border: '1px solid rgba(0,120,212,0.5)',
+                  borderRadius: '14px', cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,120,212,0.35), rgba(0,188,242,0.45))'; e.currentTarget.style.transform = 'scale(1.02)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0,120,212,0.2), rgba(0,188,242,0.3))'; e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: '12px', flexShrink: 0,
+                  background: 'linear-gradient(135deg, #0078D4, #00BCF2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Cloud size={22} color="#fff" />
+                </div>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
+                    Azure AI Speech  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>Neural TTS</span>
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', marginTop: '0.15rem' }}>
+                    Microsoft Azure · Male neural voice · Fallback engine
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Cancel */}
+            <button
+              onClick={handleModalClose}
+              style={{
+                display: 'block', width: '100%', marginTop: '1rem',
+                padding: '0.6rem', background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px',
+                color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+            >
+              Cancel — Discard Recording
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      `}</style>
     </div>
   );
 };

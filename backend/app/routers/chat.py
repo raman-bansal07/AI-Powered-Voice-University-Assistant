@@ -17,6 +17,7 @@ class TextQueryRequest(BaseModel):
     language_code: Optional[str] = "hi-IN"
     user_role: Optional[str] = "student"
     generate_audio: Optional[bool] = True
+    tts_provider: Optional[str] = "sarvam"  # 'sarvam' or 'azure'
 
 @router.post("/message")
 async def chat_message_endpoint(req: TextQueryRequest):
@@ -31,7 +32,8 @@ async def chat_message_endpoint(req: TextQueryRequest):
         query_text=req.query,
         language_code=req.language_code or "hi-IN",
         user_role=req.user_role or "student",
-        generate_audio=req.generate_audio if req.generate_audio is not None else True
+        generate_audio=req.generate_audio if req.generate_audio is not None else True,
+        tts_provider=req.tts_provider or "sarvam"
     )
     return result
 
@@ -53,7 +55,8 @@ async def voice_chat_endpoint(
     audio: UploadFile = File(...),
     language_code: str = Form("hi-IN"),
     user_role: str = Form("student"),
-    generate_audio: bool = Form(True)
+    generate_audio: bool = Form(True),
+    tts_provider: str = Form("sarvam")  # 'sarvam' or 'azure'
 ):
     """
     Direct voice upload endpoint.
@@ -76,7 +79,7 @@ async def voice_chat_endpoint(
     
     if not transcript:
         from app.config import settings
-        from app.services.agent_service import synthesize_speech_dual
+        from app.services.agent_service import synthesize_speech_by_provider
         
         canonical_lang = settings.normalize_language_code(language_code)
         polite_msg = SILENT_SPEECH_MESSAGES.get(canonical_lang, SILENT_SPEECH_MESSAGES["hi-IN"])
@@ -84,7 +87,7 @@ async def voice_chat_endpoint(
         audio_b64 = None
         tts_telem = {}
         if generate_audio:
-            audio_b64, tts_telem = await synthesize_speech_dual(polite_msg, canonical_lang)
+            audio_b64, tts_telem = await synthesize_speech_by_provider(polite_msg, canonical_lang, tts_provider)
             
         return {
             "status": "warning",
@@ -107,7 +110,8 @@ async def voice_chat_endpoint(
         query_text=transcript,
         language_code=language_code,
         user_role=user_role,
-        generate_audio=generate_audio
+        generate_audio=generate_audio,
+        tts_provider=tts_provider
     )
     result["transcription"] = transcript
     result["telemetry"]["stt"] = stt_telemetry

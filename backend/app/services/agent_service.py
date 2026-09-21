@@ -14,6 +14,7 @@ from app.services.rag_service import search_university_ordinances
 from app.services.sarvam_service import synthesize_speech_sarvam
 from app.services.azure_speech_service import synthesize_speech_azure
 from app.services.azure_openai_service import generate_azure_openai_response
+from app import telemetry
 from app.tools.university_tools import (
     get_university_overview_and_ranking,
     check_library_status,
@@ -92,11 +93,52 @@ async def synthesize_speech_dual(
         logger.error(f"Azure Speech TTS attempt failed: {e}")
         return None, {"provider": "Dual TTS", "status": "failed", "error": str(e)}
 
+async def synthesize_speech_by_provider(
+    text: str,
+    canonical_lang: str,
+    provider: str = "sarvam"
+):
+    """
+    Provider-selective speech synthesis.
+    If provider is 'azure', use Azure Neural TTS with male voices.
+    If provider is 'sarvam', use Sarvam AI TTS.
+    Falls back to dual engine if the chosen provider fails.
+    """
+    if provider == "azure":
+        logger.info(f"Using Azure AI Speech TTS (provider=azure) for lang={canonical_lang}")
+        try:
+            audio_base64, tts_telemetry = await synthesize_speech_azure(text, canonical_lang)
+            if audio_base64:
+                telemetry.record_service_call("azure_speech_tts")
+                return audio_base64, {**tts_telemetry, "selected_provider": "azure"}
+        except Exception as e:
+            logger.warning(f"Azure TTS failed, falling back to Sarvam: {e}")
+        # Fallback to Sarvam if Azure fails
+        audio_base64, tts_telemetry = await synthesize_speech_sarvam(text, canonical_lang)
+        if audio_base64:
+            telemetry.record_service_call("sarvam_tts")
+        return audio_base64, {**tts_telemetry, "selected_provider": "azure", "fallback": "sarvam"}
+    else:
+        logger.info(f"Using Sarvam AI TTS (provider=sarvam) for lang={canonical_lang}")
+        try:
+            audio_base64, tts_telemetry = await synthesize_speech_sarvam(text, canonical_lang)
+            if audio_base64:
+                telemetry.record_service_call("sarvam_tts")
+                return audio_base64, {**tts_telemetry, "selected_provider": "sarvam"}
+        except Exception as e:
+            logger.warning(f"Sarvam TTS failed, falling back to Azure: {e}")
+        # Fallback to Azure if Sarvam fails
+        audio_base64, tts_telemetry = await synthesize_speech_azure(text, canonical_lang)
+        if audio_base64:
+            telemetry.record_service_call("azure_speech_tts")
+        return audio_base64, {**tts_telemetry, "selected_provider": "sarvam", "fallback": "azure"}
+
 async def process_user_query(
     query_text: str,
     language_code: str = "hi-IN",
     user_role: str = "student",
-    generate_audio: bool = True
+    generate_audio: bool = True,
+    tts_provider: str = "sarvam"
 ) -> Dict[str, Any]:
     """
     Full pipeline processing:
@@ -104,7 +146,8 @@ async def process_user_query(
     2. LLM Intent & Tool Routing (Dynamic Azure OpenAI Call)
     3. Tool / RAG Execution
     4. Multilingual Response Formulation (Azure OpenAI GPT-4.1-mini)
-    5. Dual-Engine Spoken Voice Synthesis (Sarvam bulbul:v3 + Azure Neural Speech)
+    5. Provider-Selective Speech Synthesis (Sarvam bulbul:v3 OR Azure Neural Speech)
+    tts_provider: 'sarvam' | 'azure' — selects which TTS engine to use
     """
     start_time = time.time()
     q_lower = query_text.lower().strip()
@@ -127,8 +170,10 @@ async def process_user_query(
         audio_base64 = None
         tts_telemetry = {}
         if generate_audio:
-            audio_base64, tts_telemetry = await synthesize_speech_dual(redirect_msg, canonical_lang)
+            audio_base64, tts_telemetry = await synthesize_speech_by_provider(redirect_msg, canonical_lang, tts_provider)
             
+        telemetry.record_service_call("azure_openai")
+        telemetry.record_query(tool_used="out_of_scope", is_out_of_scope=True)
         elapsed_ms = int((time.time() - start_time) * 1000)
         return {
             "status": "success",
@@ -374,8 +419,11 @@ async def process_user_query(
     audio_base64 = None
     tts_telemetry = {}
     if generate_audio and response_text:
-        audio_base64, tts_telemetry = await synthesize_speech_dual(response_text, canonical_lang)
+        audio_base64, tts_telemetry = await synthesize_speech_by_provider(response_text, canonical_lang, tts_provider)
         
+    telemetry.record_service_call("azure_openai")
+    telemetry.record_service_call("azure_search")
+    telemetry.record_query(tool_used=tool_used, is_out_of_scope=False)
     elapsed_ms = int((time.time() - start_time) * 1000)
     
     return {

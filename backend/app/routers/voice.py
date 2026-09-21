@@ -8,6 +8,7 @@ from typing import Optional
 from app.config import settings
 from app.services.sarvam_service import transcribe_audio_sarvam
 from app.services.agent_service import synthesize_speech_dual
+from app import telemetry
 
 router = APIRouter(prefix="/api/voice", tags=["Direct Voice Testing"])
 
@@ -32,15 +33,16 @@ async def standalone_stt(
         safe_filename = "recording.webm"
         
     canonical_lang = settings.normalize_language_code(language_code)
-    transcript, telemetry = await transcribe_audio_sarvam(
+    transcript, tel = await transcribe_audio_sarvam(
         audio_bytes=audio_bytes,
         filename=safe_filename,
         language_code=canonical_lang
     )
+    telemetry.record_service_call("sarvam_stt")
     return {
         "transcript": transcript,
         "language_code": canonical_lang,
-        "telemetry": telemetry
+        "telemetry": tel
     }
 
 @router.post("/tts")

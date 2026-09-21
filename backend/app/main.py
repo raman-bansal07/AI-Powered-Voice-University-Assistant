@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 
-from app.routers import chat, voice, tools
+from app.routers import chat, voice, tools, admin
 from app.config import settings
 
 # Configure structured logging
@@ -49,10 +49,21 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+@app.on_event("startup")
+async def on_startup():
+    """Auto-index bootstrap PDFs into Azure AI Search on server start."""
+    logger.info("Server starting — running PDF bootstrap indexing...")
+    try:
+        from app.services.pdf_indexer import bootstrap_index_pdfs
+        await bootstrap_index_pdfs()
+    except Exception as e:
+        logger.warning(f"Bootstrap PDF indexing error (non-fatal): {e}")
+
 # Include API Routers
 app.include_router(chat.router)
 app.include_router(voice.router)
 app.include_router(tools.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def root():

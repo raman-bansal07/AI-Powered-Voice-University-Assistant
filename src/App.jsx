@@ -7,9 +7,15 @@ import { AssistantPage } from './pages/AssistantPage';
 import { ArchitecturePage } from './pages/ArchitecturePage';
 import { TechnologyPage } from './pages/TechnologyPage';
 import { TeamPage } from './pages/TeamPage';
+import { AdminPage } from './pages/AdminPage';
 
 const AppRouter = () => {
   const { currentRoute } = useApp();
+
+  // Admin page has its own full-screen layout (no Navbar/Footer)
+  if (currentRoute === 'admin') {
+    return <AdminPage />;
+  }
 
   return (
     <main style={{ minHeight: 'calc(100vh - 60px - 260px)' }}>

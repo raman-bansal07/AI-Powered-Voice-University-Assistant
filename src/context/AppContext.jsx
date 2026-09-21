@@ -193,12 +193,64 @@ export const AppProvider = ({ children }) => {
     }, 900);
   };
 
-  const processVoiceAudio = async (audioBlob) => {
+  const convertToWav = async (webmBlob) => {
+    try {
+      console.log("Converting WebM to WAV in browser...");
+      const arrayBuffer = await webmBlob.arrayBuffer();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      
+      const numChannels = 1;
+      const sampleRate = 16000;
+      const length = audioBuffer.length * numChannels * 2;
+      const buffer = new ArrayBuffer(44 + length);
+      const view = new DataView(buffer);
+      
+      const writeString = (view, offset, string) => {
+        for (let i = 0; i < string.length; i++) {
+          view.setUint8(offset + i, string.charCodeAt(i));
+        }
+      };
+      
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + length, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * numChannels * 2, true);
+      view.setUint16(32, numChannels * 2, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, length, true);
+      
+      const channelData = audioBuffer.getChannelData(0);
+      let offset = 44;
+      for (let i = 0; i < audioBuffer.length; i++) {
+        let sample = Math.max(-1, Math.min(1, channelData[i]));
+        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset, sample, true);
+        offset += 2;
+      }
+      
+      return new Blob([view], { type: 'audio/wav' });
+    } catch (err) {
+      console.error("WAV conversion failed", err);
+      return webmBlob;
+    }
+  };
+
+  const processVoiceAudio = async (audioBlob, provider = 'sarvam') => {
     setVoiceState('transcribing');
     try {
+      const processedBlob = await convertToWav(audioBlob);
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('audio', processedBlob, processedBlob.type === 'audio/wav' ? 'recording.wav' : 'recording.webm');
       formData.append('language_code', selectedLanguage.locale || selectedLanguage.code);
+      // Send the chosen STT provider (for future Azure STT support)
+      formData.append('stt_provider', provider);
 
       const sttResponse = await fetch(`${BACKEND_URL}/api/voice/stt`, {
         method: 'POST',
@@ -234,6 +286,7 @@ export const AppProvider = ({ children }) => {
           language_code: selectedLanguage.locale || selectedLanguage.code,
           user_role: userRole,
           generate_audio: true,
+          tts_provider: provider,  // 'sarvam' or 'azure'
         }),
       });
 
@@ -261,7 +314,7 @@ export const AppProvider = ({ children }) => {
           { step: 1, layer: 'STT', azureService: `Sarvam saaras:v3 (${selectedLanguage.name})`, latencyMs: 140, detail: `Transcribed: "${transcribedText}"`, status: 'completed' },
           { step: 2, layer: 'Intent Guardrail', azureService: 'Azure OpenAI GPT-4.1-mini Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
           { step: 3, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
-          { step: 4, layer: 'TTS Synthesis', azureService: `${data.telemetry?.tts?.provider || 'Dual TTS'} (${selectedLanguage.name})`, latencyMs: 180, detail: `Voice synthesized in ${selectedLanguage.name}`, status: 'completed' },
+          { step: 4, layer: 'TTS Synthesis', azureService: `${provider === 'azure' ? 'Azure Neural TTS (Male Voice)' : 'Sarvam bulbul:v3'} (${selectedLanguage.name})`, latencyMs: 180, detail: `Voice synthesized via ${provider === 'azure' ? 'Azure AI Speech' : 'Sarvam AI'} in ${selectedLanguage.name}`, status: 'completed' },
         ],
         telemetry: data.telemetry,
       };
