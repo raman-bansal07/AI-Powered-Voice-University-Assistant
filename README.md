@@ -1,18 +1,12 @@
 <div align="center">
 
-<table align="center" border="0" cellspacing="0" cellpadding="10" style="border: none; background: transparent;">
-  <tr>
-    <td align="center" valign="middle">
-      <img src="public/univoice-logo.svg" alt="UniVoice Logo" width="110"/>
-    </td>
-    <td align="center" valign="middle">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Microsoft_Azure_Logo.svg/1024px-Microsoft_Azure_Logo.svg.png" alt="Azure Logo" width="95"/>
-    </td>
-    <td align="center" valign="middle">
-      <img src="https://framerusercontent.com/images/3K7sN2L8Hj05gYn2tK2R0z8H0M.png" alt="Sarvam AI Logo" width="125"/>
-    </td>
-  </tr>
-</table>
+<p align="center">
+  <img src="public/univoice-logo.svg" alt="UniVoice Logo" width="100"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="public/azure-logo.svg" alt="Microsoft Azure Logo" width="80"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="public/sarvam-logo.svg" alt="Sarvam AI Logo" width="165"/>
+</p>
 
 # 🎙️ UniVoice: Multilingual AI University Assistant
 ### **Enterprise-Grade Multilingual Voice & Knowledge Gateway for Chitkara University**
