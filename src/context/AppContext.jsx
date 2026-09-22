@@ -1,11 +1,15 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { INDIAN_LANGUAGES } from '../data/indianLanguages';
 import { INITIAL_CONVERSATION } from '../data/mockConversations';
 
 const AppContext = createContext(undefined);
 
 export const AppProvider = ({ children }) => {
-  const [currentRoute, setCurrentRoute] = useState('about');
+  const [currentRoute, setCurrentRoute] = useState(() => {
+    const hash = window.location.hash.replace('#/', '').replace('#', '');
+    const validRoutes = ['about', 'assistant', 'architecture', 'knowledge', 'technology', 'security', 'team', 'admin'];
+    return validRoutes.includes(hash) ? hash : 'about';
+  });
   const [selectedLanguage, setSelectedLanguage] = useState(INDIAN_LANGUAGES[0]);
   const [voiceState, setVoiceState] = useState('idle');
   const [userRole, setUserRole] = useState('student');
@@ -17,6 +21,98 @@ export const AppProvider = ({ children }) => {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [playbackAudioText, setPlaybackAudioText] = useState(null);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+
+  // Ref to abort in-flight requests when user logs out mid-voice
+  const abortControllerRef = useRef(null);
+
+  // ── Authentication & Daily Quota State ──
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('univoice_auth_token') || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('univoice_user_profile');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [quotaInfo, setQuotaInfo] = useState({
+    daily_limit: 5,
+    used_today: 0,
+    remaining_today: 5,
+    role: 'visitor'
+  });
+
+  const BACKEND_URL = ''; // Vite proxy forwards /api -> http://localhost:8000
+
+  // Sync user profile on mount / token change
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!authToken) {
+        setUser(null);
+        return;
+      }
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+          if (data.user?.quota) {
+            setQuotaInfo(data.user.quota);
+          }
+          if (data.user?.role) {
+            setUserRole(data.user.role);
+          }
+          localStorage.setItem('univoice_user_profile', JSON.stringify(data.user));
+        } else if (res.status === 401) {
+          // Token expired or invalid
+          logoutUser();
+        }
+      } catch (e) {
+        console.warn('Failed to fetch user profile:', e);
+      }
+    };
+    fetchUserProfile();
+  }, [authToken]);
+
+  const loginUser = (token, userData) => {
+    setAuthToken(token);
+    setUser(userData);
+    localStorage.setItem('univoice_auth_token', token);
+    localStorage.setItem('univoice_user_profile', JSON.stringify(userData));
+    if (userData?.quota) {
+      setQuotaInfo(userData.quota);
+    }
+    if (userData?.role) {
+      setUserRole(userData.role);
+    }
+  };
+
+  const registerUserWithOtp = (token, userData) => {
+    loginUser(token, userData);
+  };
+
+  const logoutUser = () => {
+    // Abort any in-flight API call immediately
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setAuthToken(null);
+    setUser(null);
+    localStorage.removeItem('univoice_auth_token');
+    localStorage.removeItem('univoice_user_profile');
+    setQuotaInfo({ daily_limit: 5, used_today: 0, remaining_today: 5, role: 'visitor' });
+    // Stop any ongoing voice/audio state
+    setVoiceState('idle');
+    setIsPlayingAudio(false);
+    setPlaybackAudioText(null);
+  };
+
+  const openAuthModal = () => setIsAuthModalOpen(true);
+  const closeAuthModal = () => setIsAuthModalOpen(false);
 
   // Sync hash with route if available
   useEffect(() => {
@@ -72,8 +168,6 @@ export const AppProvider = ({ children }) => {
     setIsPlayingAudio(false);
   };
 
-  const BACKEND_URL = ''; // Vite proxy forwards /api -> http://localhost:8000
-
   // Play base64 audio from Sarvam TTS
   const playAudioFromBase64 = (base64Audio) => {
     try {
@@ -96,6 +190,12 @@ export const AppProvider = ({ children }) => {
   };
 
   const triggerVoiceQuerySimulation = async (customPrompt, customLang) => {
+    // Gatekeep if not authenticated
+    if (!authToken) {
+      openAuthModal();
+      return;
+    }
+
     const lang = customLang
       ? INDIAN_LANGUAGES.find((l) => l.code === customLang) || selectedLanguage
       : selectedLanguage;
@@ -121,13 +221,19 @@ export const AppProvider = ({ children }) => {
       };
       addMessage(userMsg);
 
-      // Step 3: Reasoning state — call real backend
+      // Step 3: Reasoning state — call real backend with Auth Token
       setVoiceState('reasoning');
 
       try {
+        // Create fresh abort controller for this request
+        abortControllerRef.current = new AbortController();
         const response = await fetch(`${BACKEND_URL}/api/chat/message`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          signal: abortControllerRef.current.signal,
           body: JSON.stringify({
             query: queryText,
             language_code: lang.locale || lang.code,
@@ -138,15 +244,35 @@ export const AppProvider = ({ children }) => {
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
+          if (response.status === 401) {
+            openAuthModal();
+            throw {
+              type: 'AuthenticationRequired',
+              message: 'Your session has expired. Please sign in again.',
+              subsystem: 'Identity Firewall'
+            };
+          }
+          if (response.status === 429) {
+            throw {
+              type: 'QuotaExhausted',
+              message: errData.detail?.message || 'Daily query quota exhausted! Please check back tomorrow.',
+              subsystem: 'Quota Limiter'
+            };
+          }
           throw {
             type: errData.error_type || 'BackendError',
-            message: errData.message || `Backend returned HTTP ${response.status}`,
+            message: errData.detail?.message || errData.message || `Backend returned HTTP ${response.status}`,
             subsystem: errData.subsystem || 'FastAPI',
             path: errData.path || '/api/chat/message',
           };
         }
 
         const data = await response.json();
+
+        // Update live quota info
+        if (data.user_quota) {
+          setQuotaInfo(data.user_quota);
+        }
 
         const assistantMsg = {
           id: `msg-${Date.now()}-ast`,
@@ -161,15 +287,15 @@ export const AppProvider = ({ children }) => {
             docTitle: c.title,
             category: c.source_type,
             section: c.section,
-            confidence: c.relevance_score || 0.92,
-            pageNumber: c.reference_id || (i + 1),
+            confidence: c.relevance_score || 0.95,
             accessLevel: 'public',
           })),
           trace: [
-            { step: 1, layer: 'STT', azureService: `Sarvam saaras:v3 (${lang.name})`, latencyMs: data.telemetry?.stt?.status_code === 200 ? 140 : 0, detail: `Transcribed to ${lang.name}`, status: 'completed' },
-            { step: 2, layer: 'Intent Guardrail', azureService: 'Azure OpenAI GPT-4.1-mini Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
-            { step: 3, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
-            { step: 4, layer: 'TTS Synthesis', azureService: `${data.telemetry?.tts?.provider || 'Dual TTS'} (${lang.name})`, latencyMs: data.telemetry?.tts?.status_code === 200 ? 180 : 0, detail: `Voice synthesized in ${lang.name}`, status: 'completed' },
+            { step: 1, layer: 'STT Transcription', azureService: `Sarvam saaras:v3 (${lang.name})`, latencyMs: 80, detail: `Input: "${queryText}"`, status: 'completed' },
+            { step: 2, layer: 'Identity & Quota Firewall', azureService: `Chitkara Auth Shield (${quotaInfo.remaining_today} Left)`, latencyMs: 4, detail: `User: ${user?.email || 'Authenticated'}`, status: 'completed' },
+            { step: 3, layer: 'Intent Guardrail', azureService: 'Azure OpenAI GPT-4.1-mini Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
+            { step: 4, layer: 'Tool / RAG Search', azureService: data.tool_used || 'Azure AI Search RAG', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
+            { step: 5, layer: 'TTS Synthesis', azureService: `${data.telemetry?.tts?.provider || 'Dual TTS'} (${lang.name})`, latencyMs: data.telemetry?.tts?.status_code === 200 ? 180 : 0, detail: `Voice synthesized in ${lang.name}`, status: 'completed' },
           ],
           telemetry: data.telemetry,
         };
@@ -189,7 +315,8 @@ export const AppProvider = ({ children }) => {
         }
 
       } catch (err) {
-        // Show structured error card in conversation feed
+        // Ignore abort errors — user voluntarily logged out
+        if (err?.name === 'AbortError') return;
         const isStructuredError = err && err.type;
         const assistantMsg = {
           id: `msg-${Date.now()}-err`,
@@ -198,11 +325,11 @@ export const AppProvider = ({ children }) => {
           language: lang.code,
           text: isStructuredError
             ? `Unable to process request: ${err.message}`
-            : 'The university assistant backend is currently unreachable. Please ensure the FastAPI server is running at localhost:8000.',
+            : 'The university assistant backend is currently unreachable. Please ensure the FastAPI server is running.',
           isErrorFallback: true,
           errorReason: isStructuredError
             ? `${err.type} — ${err.subsystem || 'Backend'}: ${err.message}`
-            : `Network Error: Cannot connect to http://localhost:8000 — start the backend with: python run.py`,
+            : `Network Error: Cannot connect to backend server.`,
           errorType: err?.type || 'NetworkError',
           errorSubsystem: err?.subsystem || 'FastAPI Gateway',
         };
@@ -215,7 +342,6 @@ export const AppProvider = ({ children }) => {
 
   const convertToWav = async (webmBlob) => {
     try {
-      console.log("Converting WebM to WAV in browser...");
       const arrayBuffer = await webmBlob.arrayBuffer();
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
       const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
@@ -262,6 +388,11 @@ export const AppProvider = ({ children }) => {
     }
   };
   const processVoiceAudio = async (audioBlob, provider = 'sarvam') => {
+    if (!authToken) {
+      openAuthModal();
+      return;
+    }
+
     setVoiceState('transcribing');
     try {
       const processedBlob = await convertToWav(audioBlob);
@@ -270,12 +401,26 @@ export const AppProvider = ({ children }) => {
       formData.append('language_code', selectedLanguage.locale || selectedLanguage.code);
       formData.append('provider', provider);
 
+      // Create abort controller for this voice pipeline
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+
       const sttResponse = await fetch(`${BACKEND_URL}/api/voice/stt`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        signal,
         body: formData,
       });
 
-      if (!sttResponse.ok) throw new Error(`STT API Error: ${sttResponse.status}`);
+      if (!sttResponse.ok) {
+        if (sttResponse.status === 401) {
+          openAuthModal();
+          throw new Error('Please sign in to use the voice assistant.');
+        }
+        throw new Error(`STT API Error: ${sttResponse.status}`);
+      }
 
       const sttData = await sttResponse.json();
       const transcribedText = sttData.transcript || '';
@@ -294,11 +439,15 @@ export const AppProvider = ({ children }) => {
       };
       addMessage(userMsg);
 
-      // Route to AI reasoning pipeline
+      // Route to AI reasoning pipeline with Auth
       setVoiceState('reasoning');
       const chatResponse = await fetch(`${BACKEND_URL}/api/chat/message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        signal,
         body: JSON.stringify({
           query: transcribedText,
           language_code: selectedLanguage.locale || selectedLanguage.code,
@@ -308,9 +457,19 @@ export const AppProvider = ({ children }) => {
         }),
       });
 
-      if (!chatResponse.ok) throw new Error(`Chat API Error: ${chatResponse.status}`);
+      if (!chatResponse.ok) {
+        const errJson = await chatResponse.json().catch(() => ({}));
+        if (chatResponse.status === 429) {
+          throw new Error(errJson.detail?.message || 'Daily query quota limit reached!');
+        }
+        throw new Error(`Chat API Error: ${chatResponse.status}`);
+      }
 
       const data = await chatResponse.json();
+
+      if (data.user_quota) {
+        setQuotaInfo(data.user_quota);
+      }
 
       const assistantMsg = {
         id: `msg-${Date.now()}-ast`,
@@ -330,9 +489,10 @@ export const AppProvider = ({ children }) => {
         })),
         trace: [
           { step: 1, layer: 'STT', azureService: `Sarvam saaras:v3 (${selectedLanguage.name})`, latencyMs: 140, detail: `Transcribed: "${transcribedText}"`, status: 'completed' },
-          { step: 2, layer: 'Intent Guardrail', azureService: 'Azure OpenAI GPT-4.1-mini Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
-          { step: 3, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
-          { step: 4, layer: 'TTS Synthesis', azureService: `${provider === 'azure' ? 'Azure Neural TTS (Male Voice)' : 'Sarvam bulbul:v3'} (${selectedLanguage.name})`, latencyMs: 180, detail: `Voice synthesized via ${provider === 'azure' ? 'Azure AI Speech' : 'Sarvam AI'} in ${selectedLanguage.name}`, status: 'completed' },
+          { step: 2, layer: 'Identity & Quota Firewall', azureService: `Chitkara Auth Shield (${quotaInfo.remaining_today} Left)`, latencyMs: 4, detail: `User: ${user?.email || 'Authenticated'}`, status: 'completed' },
+          { step: 3, layer: 'Intent Guardrail', azureService: 'Azure OpenAI GPT-4.1-mini Router', latencyMs: 2, detail: data.telemetry?.guardrail?.llm_reasoning || 'PASSED_IN_SCOPE', status: 'completed' },
+          { step: 4, layer: 'Tool / RAG', azureService: data.tool_used || 'RAG Ordinances', latencyMs: 10, detail: `Tool: ${data.tool_used || 'RAG Retrieval'}`, status: 'completed' },
+          { step: 5, layer: 'TTS Synthesis', azureService: `${provider === 'azure' ? 'Azure Neural TTS (Male Voice)' : 'Sarvam bulbul:v3'} (${selectedLanguage.name})`, latencyMs: 180, detail: `Voice synthesized via ${provider === 'azure' ? 'Azure AI Speech' : 'Sarvam AI'} in ${selectedLanguage.name}`, status: 'completed' },
         ],
         telemetry: data.telemetry,
       };
@@ -348,17 +508,19 @@ export const AppProvider = ({ children }) => {
         setTimeout(() => { setVoiceState('idle'); setIsPlayingAudio(false); }, 3000);
       }
     } catch (err) {
+      // Ignore abort errors — user voluntarily logged out
+      if (err?.name === 'AbortError') return;
       console.error('processVoiceAudio error:', err);
       addMessage({
         id: `msg-${Date.now()}-err`,
         sender: 'assistant',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         language: selectedLanguage.code,
-        text: `Audio error: ${err.message}`,
+        text: `Error: ${err.message}`,
         isErrorFallback: true,
-        errorReason: `Audio Pipeline: ${err.message}`,
-        errorType: 'AudioError',
-        errorSubsystem: 'MediaRecorder → STT',
+        errorReason: `Identity / Voice Pipeline: ${err.message}`,
+        errorType: 'VoiceOrQuotaError',
+        errorSubsystem: 'Identity & Audio Gateway',
       });
       setVoiceState('idle');
       setIsPlayingAudio(false);
@@ -396,6 +558,16 @@ export const AppProvider = ({ children }) => {
         isAdminAuthenticated,
         adminLogin,
         adminLogout,
+        // Auth Exports
+        user,
+        authToken,
+        isAuthModalOpen,
+        quotaInfo,
+        openAuthModal,
+        closeAuthModal,
+        loginUser,
+        registerUserWithOtp,
+        logoutUser,
       }}
     >
       {children}

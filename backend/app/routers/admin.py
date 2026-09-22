@@ -15,6 +15,10 @@ from pydantic import BaseModel
 from app import telemetry
 from app.config import settings
 from app.services.pdf_indexer import index_pdf, UPLOADS_DIR
+from app.services.user_service import (
+    get_audit_logs_summary,
+    get_all_users_for_admin,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -188,9 +192,56 @@ async def upload_pdf(
 
 
 # ─────────────────────────────────────────────
+# Date-wise Daily Breakdown
+# ─────────────────────────────────────────────
+@router.get("/daily-breakdown")
+async def get_daily_breakdown(authorized: bool = Depends(verify_admin)):
+    """
+    Returns a per-day table of queries + every service's call count.
+    Sorted newest-first. Includes every date ever recorded — not just last 7 days.
+    Shape:
+      {
+        "rows": [
+          {
+            "date": "2026-09-22",
+            "queries": 5,
+            "sarvam_stt": 3,
+            "sarvam_tts": 2,
+            "azure_speech_tts": 1,
+            "azure_openai": 5,
+            "azure_search": 4
+          },
+          ...
+        ],
+        "total_days": 1
+      }
+    """
+    return telemetry.get_daily_breakdown()
+
+
+# ─────────────────────────────────────────────
 # List Indexed PDFs
 # ─────────────────────────────────────────────
 @router.get("/pdfs")
 async def list_pdfs(authorized: bool = Depends(verify_admin)):
     """Returns list of all indexed PDFs."""
     return {"pdfs": telemetry._store.get("indexed_pdfs", [])}
+
+
+# ─────────────────────────────────────────────
+# Registered Users (Admin User Panel)
+# ─────────────────────────────────────────────
+@router.get("/users")
+async def list_users(authorized: bool = Depends(verify_admin)):
+    """
+    Returns all registered users: email, name, role, roll number,
+    branch, quota, malicious query count.
+    """
+    users = get_all_users_for_admin()
+    return {
+        "status": "success",
+        "total_users": len(users),
+        "students": sum(1 for u in users if u["role"] == "student"),
+        "visitors": sum(1 for u in users if u["role"] != "student"),
+        "users": users
+    }

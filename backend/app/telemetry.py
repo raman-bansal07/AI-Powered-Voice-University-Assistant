@@ -62,12 +62,18 @@ def _load():
 
 
 def _save():
-    """Persist telemetry to disk."""
+    """Persist telemetry to disk atomically (write to temp file, then rename)."""
+    tmp = TELEMETRY_FILE.with_suffix(".tmp")
     try:
-        with open(TELEMETRY_FILE, "w", encoding="utf-8") as f:
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(_store, f, indent=2, ensure_ascii=False)
+        tmp.replace(TELEMETRY_FILE)  # atomic on POSIX; near-atomic on Windows
     except Exception as e:
         logger.warning(f"Could not save telemetry: {e}")
+        try:
+            tmp.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 def record_query(tool_used: str = "rag_university_ordinances", is_out_of_scope: bool = False):
@@ -107,8 +113,9 @@ def add_indexed_pdf(filename: str):
 def get_stats() -> Dict[str, Any]:
     """Return full stats for the admin dashboard."""
     today = _today()
-    # Last 7 days of queries
     from datetime import timedelta
+
+    # Last 7 days of queries
     last_7 = {}
     for i in range(6, -1, -1):
         d = (date.today() - timedelta(days=i)).isoformat()
@@ -123,8 +130,34 @@ def get_stats() -> Dict[str, Any]:
         "tool_hits": dict(_store["tool_hits"]),
         "service_calls_total": dict(_store["service_calls"]),
         "service_calls_today": today_services,
+        # Full date-keyed history — every day ever recorded
+        "all_daily_queries": dict(_store["daily_queries"]),
+        "all_daily_service_calls": dict(_store["daily_service_calls"]),
         "indexed_pdfs": list(_store["indexed_pdfs"]),
     }
+
+
+def get_daily_breakdown() -> Dict[str, Any]:
+    """Return a per-day summary of queries + service calls for all recorded dates."""
+    all_dates = sorted(
+        set(list(_store["daily_queries"].keys()) + list(_store["daily_service_calls"].keys())),
+        reverse=True,  # newest first
+    )
+
+    rows = []
+    for d in all_dates:
+        svc = _store["daily_service_calls"].get(d, {})
+        rows.append({
+            "date": d,
+            "queries": _store["daily_queries"].get(d, 0),
+            "sarvam_stt": svc.get("sarvam_stt", 0),
+            "sarvam_tts": svc.get("sarvam_tts", 0),
+            "azure_speech_tts": svc.get("azure_speech_tts", 0),
+            "azure_openai": svc.get("azure_openai", 0),
+            "azure_search": svc.get("azure_search", 0),
+        })
+
+    return {"rows": rows, "total_days": len(rows)}
 
 
 # Load saved data on module import
