@@ -87,9 +87,9 @@ const PILLARS = [
 
 const STATS = [
   { value: '10+',    label: 'Indian Languages',  color: '#60A5FA' },
-  { value: '100%',   label: 'Grounded Answers',  color: '#34D399' },
-  { value: '<450ms', label: 'Voice Latency',      color: '#FBBF24' },
-  { value: '3',      label: 'Azure Services',     color: '#A78BFA' },
+  { value: '100%',   label: 'Grounded Ordinances', color: '#34D399' },
+  { value: '<950ms', label: 'Voice Latency',      color: '#FBBF24' },
+  { value: '6',      label: 'Core Cloud Services', color: '#A78BFA' },
 ];
 
 export const AboutPage = () => {

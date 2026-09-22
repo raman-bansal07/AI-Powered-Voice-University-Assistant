@@ -70,7 +70,7 @@ export const INITIAL_CONVERSATION = [
       {
         step: 3,
         layer: 'Synthesis',
-        azureService: 'Azure OpenAI (GPT-4o)',
+        azureService: 'Azure OpenAI (GPT-4.1-mini)',
         latencyMs: 145,
         detail: 'Grounded response synthesized with neural voice.',
         status: 'completed',

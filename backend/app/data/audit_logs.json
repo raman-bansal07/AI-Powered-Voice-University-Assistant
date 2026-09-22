@@ -26,5 +26,19 @@
     "tool_used": null,
     "is_out_of_scope": true,
     "remaining_queries": 4
+  },
+  {
+    "log_id": "aud_62fd5790e9a3",
+    "timestamp": "2026-09-22T14:03:22.662081",
+    "user_email": "simran3400.beai24@chitkara.edu.in",
+    "user_name": "simran",
+    "user_role": "student",
+    "ip_address": "127.0.0.1",
+    "query_type": "text",
+    "query_text": "\u0986\u09ae\u09bf \u09a4\u09cb\u09ae\u09be\u0995\u09c7 \u09ad\u09be\u09b2\u09cb\u09ac\u09be\u09b8\u09bf\u0964",
+    "intent": "OUT_OF_SCOPE_GUARDRAIL",
+    "tool_used": null,
+    "is_out_of_scope": true,
+    "remaining_queries": 19
   }
 ]

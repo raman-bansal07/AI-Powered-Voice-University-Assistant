@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  MessageSquare, Calendar, Mic, Volume2, Bot, Search,
+  TrendingUp, Wrench, Award, Activity, FileText, Users,
+  ShieldAlert, ShieldCheck, RefreshCw, Upload, GraduationCap,
+  Globe, AlertCircle, CheckCircle2, Shield
+} from 'lucide-react';
 
 const BACKEND_URL = '';
 const ADMIN_TOKEN_KEY = 'univoice_admin_token';
@@ -265,21 +271,57 @@ function StatusBadge({ status }) {
 }
 
 // ─── Stat Card ───
-function StatCard({ label, value, sub, color = C.blue, icon }) {
+function StatCard({ label, value, sub, color = C.blue, icon: IconComponent }) {
   return (
     <div style={{
-      background: C.card, border: `1px solid ${C.cardBorder}`,
-      borderRadius: 16, padding: '1.25rem 1.5rem',
-      borderTop: `3px solid ${color}`,
+      background: 'linear-gradient(145deg, #0F1630 0%, #0B0F22 100%)',
+      border: '1px solid rgba(99,120,200,0.18)',
+      borderRadius: 16,
+      padding: '1.35rem 1.5rem',
+      position: 'relative',
+      overflow: 'hidden',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      minHeight: 110,
     }}>
+      {/* Top accent glow line */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+        background: `linear-gradient(90deg, ${color} 0%, transparent 100%)`,
+      }} />
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div style={{ color: C.textMuted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{label}</div>
-          <div style={{ color: C.textPrimary, fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>{value}</div>
-          {sub && <div style={{ color: C.textMuted, fontSize: '0.78rem', marginTop: 4 }}>{sub}</div>}
+          <div style={{ color: '#8B9CC8', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            {label}
+          </div>
+          <div style={{ color: '#F8FAFC', fontSize: '2rem', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em' }}>
+            {value}
+          </div>
         </div>
-        {icon && <div style={{ fontSize: 28, opacity: 0.7 }}>{icon}</div>}
+        {IconComponent && (
+          <div style={{
+            background: `${color}18`,
+            border: `1px solid ${color}35`,
+            borderRadius: 12,
+            padding: 9,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: color,
+            boxShadow: `0 0 16px ${color}15`,
+          }}>
+            <IconComponent size={20} />
+          </div>
+        )}
       </div>
+      {sub && (
+        <div style={{ color: '#64748B', fontSize: '0.76rem', marginTop: 12, fontWeight: 500 }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -333,8 +375,8 @@ function LoginPage({ onLogin }) {
             width: 60, height: 60, borderRadius: '50%', margin: '0 auto 1rem',
             background: 'linear-gradient(135deg, #0078D4, #8B5CF6)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, boxShadow: '0 0 30px rgba(0,120,212,0.4)',
-          }}>🎓</div>
+            boxShadow: '0 0 30px rgba(0,120,212,0.4)',
+          }}><GraduationCap size={28} color="#FFFFFF" /></div>
           <h1 style={{ color: C.textPrimary, fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>UniVoice Admin</h1>
           <p style={{ color: C.textMuted, fontSize: '0.85rem', marginTop: 6 }}>Sign in to access the dashboard</p>
         </div>
@@ -497,10 +539,12 @@ function Dashboard({ token, onLogout }) {
         justifyContent: 'space-between', height: 60, position: 'sticky', top: 0, zIndex: 100,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 24 }}>🎓</span>
+          <div style={{ background: 'rgba(59,130,246,0.15)', padding: 6, borderRadius: 8, display: 'flex' }}>
+            <GraduationCap size={20} color="#60A5FA" />
+          </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: C.textPrimary }}>UniVoice Admin</div>
-            <div style={{ color: C.textMuted, fontSize: '0.72rem' }}>Dashboard</div>
+            <div style={{ color: C.textMuted, fontSize: '0.72rem' }}>Dashboard & Audit Center</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -513,23 +557,26 @@ function Dashboard({ token, onLogout }) {
         </div>
       </div>
 
-      <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+      <div style={{ padding: '2rem', maxWidth: 1240, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '3rem' }}>
 
         {/* ── OVERVIEW SECTION ── */}
         <div>
-            {/* Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <StatCard label="Total Queries" value={fmt(stats?.total_queries)} sub="All time" color={C.blue} icon="🗣️" />
-              <StatCard label="Today's Queries" value={fmt(stats?.today_queries)} sub={new Date().toLocaleDateString('en-IN')} color={C.purple} icon="📅" />
-              <StatCard label="Sarvam API Calls" value={fmt(stats?.service_calls_total?.sarvam_stt + stats?.service_calls_total?.sarvam_tts)} sub="STT + TTS combined" color="#8B5CF6" icon="🎤" />
-              <StatCard label="Azure Speech Calls" value={fmt(stats?.service_calls_total?.azure_speech_tts)} sub="Neural TTS" color={C.blue} icon="☁️" />
-              <StatCard label="Azure OpenAI Calls" value={fmt(stats?.service_calls_total?.azure_openai)} sub="GPT-4.1-mini" color={C.green} icon="🤖" />
-              <StatCard label="Azure Search Calls" value={fmt(stats?.service_calls_total?.azure_search)} sub="RAG retrievals" color={C.yellow} icon="🔍" />
+            {/* Stat Cards - Balanced 3x2 Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+              <StatCard label="Total Queries" value={fmt(stats?.total_queries)} sub="All-time interactions" color="#3B82F6" icon={MessageSquare} />
+              <StatCard label="Today's Queries" value={fmt(stats?.today_queries)} sub={new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} color="#8B5CF6" icon={Calendar} />
+              <StatCard label="Sarvam AI Calls" value={fmt((stats?.service_calls_total?.sarvam_stt || 0) + (stats?.service_calls_total?.sarvam_tts || 0))} sub="STT + TTS combined" color="#34D399" icon={Mic} />
+              <StatCard label="Azure Speech Calls" value={fmt(stats?.service_calls_total?.azure_speech_tts)} sub="Neural Voice TTS" color="#60A5FA" icon={Volume2} />
+              <StatCard label="Azure OpenAI Calls" value={fmt(stats?.service_calls_total?.azure_openai)} sub="GPT-4.1-mini Reasoning" color="#F59E0B" icon={Bot} />
+              <StatCard label="Azure Search Calls" value={fmt(stats?.service_calls_total?.azure_search)} sub="Vector + Semantic RAG" color="#EC4899" icon={Search} />
             </div>
 
             {/* Line Chart */}
             <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: '1.5rem', marginBottom: '2rem' }}>
-              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1rem', marginBottom: '1rem' }}>📈 Daily Queries — Last 7 Days</div>
+              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <TrendingUp size={18} color="#60A5FA" />
+                <span>Daily Queries — Last 7 Days</span>
+              </div>
               {lineData.length > 0
                 ? <LineChart data={lineData} color={C.blue} />
                 : <div style={{ color: C.textMuted, textAlign: 'center', padding: '2rem' }}>No query data yet. Ask the assistant a question to see stats here!</div>
@@ -538,7 +585,10 @@ function Dashboard({ token, onLogout }) {
 
             {/* Bar Chart — Tool Hits */}
             <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: '1.5rem', marginBottom: '2rem' }}>
-              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1rem', marginBottom: '1rem' }}>🔧 Most Used Tools</div>
+              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Wrench size={18} color="#A78BFA" />
+                <span>Most Used Tools</span>
+              </div>
               {barData.some(d => d.value > 0)
                 ? <BarChart data={barData} color={C.purple} />
                 : <div style={{ color: C.textMuted, textAlign: 'center', padding: '2rem' }}>No tool usage data yet.</div>
@@ -550,9 +600,11 @@ function Dashboard({ token, onLogout }) {
               <div style={{
                 background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(0,120,212,0.1))',
                 border: `1px solid rgba(139,92,246,0.3)`, borderRadius: 16, padding: '1.25rem 1.5rem',
-                display: 'flex', alignItems: 'center', gap: '1rem',
+                display: 'flex', alignItems: 'center', gap: '1.25rem',
               }}>
-                <span style={{ fontSize: 36 }}>🏆</span>
+                <div style={{ background: 'rgba(245,158,11,0.15)', padding: 12, borderRadius: 14 }}>
+                  <Award size={30} color="#FBBF24" />
+                </div>
                 <div>
                   <div style={{ color: C.textMuted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Most Hit Tool</div>
                   <div style={{ color: C.textPrimary, fontWeight: 800, fontSize: '1.2rem' }}>{barData[0].label}</div>
@@ -565,12 +617,18 @@ function Dashboard({ token, onLogout }) {
         {/* ── SERVICES SECTION ── */}
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1.1rem' }}>⚡ Live Service Health</div>
+              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Activity size={18} color="#34D399" />
+                <span>Live Service Health</span>
+              </div>
               <button onClick={fetchHealth} style={{
                 background: 'rgba(0,120,212,0.15)', border: '1px solid rgba(0,120,212,0.3)',
                 color: C.blue, padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
-                fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
-              }}>🔄 Refresh</button>
+                fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <RefreshCw size={13} />
+                <span>Refresh</span>
+              </button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
               {health ? Object.entries(health.services).map(([key, svc]) => (
@@ -703,7 +761,10 @@ function Dashboard({ token, onLogout }) {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <div>
-                <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1.1rem' }}>📄 PDF Knowledge Base</div>
+                <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FileText size={18} color="#EF4444" />
+                  <span>PDF Knowledge Base</span>
+                </div>
                 <div style={{ color: C.textMuted, fontSize: '0.82rem', marginTop: 4 }}>Uploaded PDFs are indexed into Azure AI Search for instant voice query retrieval.</div>
               </div>
               <button
@@ -713,10 +774,11 @@ function Dashboard({ token, onLogout }) {
                   background: 'linear-gradient(135deg, #0078D4, #0055A0)',
                   border: 'none', color: '#fff', padding: '10px 20px', borderRadius: 12,
                   cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', fontFamily: 'inherit',
-                  opacity: uploading ? 0.6 : 1,
+                  opacity: uploading ? 0.6 : 1, display: 'flex', alignItems: 'center', gap: 8
                 }}
               >
-                {uploading ? '⏳ Indexing...' : '+ Upload PDF'}
+                <Upload size={16} />
+                <span>{uploading ? 'Indexing...' : '+ Upload PDF'}</span>
               </button>
               <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={handleUpload} />
             </div>
@@ -743,8 +805,10 @@ function Dashboard({ token, onLogout }) {
                     <div style={{
                       width: 44, height: 44, borderRadius: 10, flexShrink: 0,
                       background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-                    }}>📄</div>
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <FileText size={20} color="#EF4444" />
+                    </div>
                     <div style={{ overflow: 'hidden' }}>
                       <div style={{ color: C.textPrimary, fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pdf}</div>
                       <div style={{ color: C.green, fontSize: '0.72rem', marginTop: 2, fontWeight: 600 }}>✓ Indexed in Azure AI Search</div>
@@ -756,7 +820,9 @@ function Dashboard({ token, onLogout }) {
                     gridColumn: '1/-1', background: C.card, border: `1px dashed ${C.cardBorder}`,
                     borderRadius: 16, padding: '3rem', textAlign: 'center',
                   }}>
-                    <div style={{ fontSize: 48, marginBottom: '1rem' }}>📭</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                      <FileText size={40} color="#475569" />
+                    </div>
                     <div style={{ color: C.textSecondary, fontWeight: 600 }}>No PDFs indexed yet</div>
                     <div style={{ color: C.textMuted, fontSize: '0.82rem', marginTop: 4 }}>Upload a PDF to add it to the knowledge base</div>
                   </div>
