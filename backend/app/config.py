@@ -40,7 +40,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "hi-IN",
             "sarvam_tts_code": "hi-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "hi-IN-MadhurNeural"
+            "azure_voice": "hi-IN-MadhurNeural"  # Male Hindi voice
         },
         "en-IN": {
             "name": "English (India)",
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "en-IN",
             "sarvam_tts_code": "en-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "en-IN-PrabhatNeural"
+            "azure_voice": "en-IN-PrabhatNeural"  # Male Indian English voice
         },
         "ta-IN": {
             "name": "Tamil",
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "ta-IN",
             "sarvam_tts_code": "ta-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "ta-IN-ValluvarNeural"
+            "azure_voice": "ta-IN-ValluvarNeural"  # Male Tamil voice
         },
         "te-IN": {
             "name": "Telugu",
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "te-IN",
             "sarvam_tts_code": "te-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "te-IN-MohanNeural"
+            "azure_voice": "te-IN-MohanNeural"  # Male Telugu voice
         },
         "mr-IN": {
             "name": "Marathi",
@@ -72,7 +72,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "mr-IN",
             "sarvam_tts_code": "mr-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "mr-IN-AarohiNeural"
+            "azure_voice": "mr-IN-ManoharNeural"  # Male Marathi voice
         },
         "bn-IN": {
             "name": "Bengali",
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "bn-IN",
             "sarvam_tts_code": "bn-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "bn-IN-TanishaaNeural"
+            "azure_voice": "bn-IN-BashkarNeural"  # Male Bengali voice
         },
         "gu-IN": {
             "name": "Gujarati",
@@ -88,7 +88,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "gu-IN",
             "sarvam_tts_code": "gu-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "gu-IN-DhwaniNeural"
+            "azure_voice": "gu-IN-NiranjanNeural"  # Male Gujarati voice
         },
         "kn-IN": {
             "name": "Kannada",
@@ -96,7 +96,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "kn-IN",
             "sarvam_tts_code": "kn-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "kn-IN-SapnaNeural"
+            "azure_voice": "kn-IN-GaganNeural"  # Male Kannada voice
         },
         "ml-IN": {
             "name": "Malayalam",
@@ -104,7 +104,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "ml-IN",
             "sarvam_tts_code": "ml-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "ml-IN-SobhanaNeural"
+            "azure_voice": "ml-IN-MidhunNeural"  # Male Malayalam voice
         },
         "pa-IN": {
             "name": "Punjabi",
@@ -112,7 +112,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "pa-IN",
             "sarvam_tts_code": "pa-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "pa-IN-GurpreetNeural"
+            "azure_voice": "pa-IN-OjasNeural"  # Male Punjabi voice
         },
         "or-IN": {
             "name": "Odia",
@@ -120,7 +120,7 @@ class Settings(BaseSettings):
             "sarvam_stt_code": "od-IN",
             "sarvam_tts_code": "od-IN",
             "sarvam_speaker": "priya",
-            "azure_voice": "hi-IN-SwaraNeural"
+            "azure_voice": "or-IN-SukantNeural"  # Male Odia voice
         }
     }
 

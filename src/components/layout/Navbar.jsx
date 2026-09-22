@@ -52,6 +52,7 @@ export const Navbar = () => {
     { route: 'architecture', label: 'Architecture',   icon: <Layers size={13} /> },
     { route: 'technology',   label: 'Azure Stack',    icon: <Cpu size={13} /> },
     { route: 'team',         label: 'Team',           icon: <Users size={13} /> },
+    { route: 'admin',        label: 'Admin',          icon: <UserCheck size={13} /> },
   ];
 
   const dropdownStyle = {

@@ -12,6 +12,11 @@ import { AdminPage } from './pages/AdminPage';
 const AppRouter = () => {
   const { currentRoute } = useApp();
 
+  // Admin page has its own full-screen layout (no Navbar/Footer)
+  if (currentRoute === 'admin') {
+    return <AdminPage />;
+  }
+
   return (
     <main style={{ minHeight: 'calc(100vh - 60px - 260px)' }}>
       {currentRoute === 'about'        && <AboutPage />}

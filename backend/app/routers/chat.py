@@ -18,7 +18,7 @@ class TextQueryRequest(BaseModel):
     language_code: Optional[str] = "hi-IN"
     user_role: Optional[str] = "student"
     generate_audio: Optional[bool] = True
-    provider: Optional[str] = "sarvam"
+    provider: str = "sarvam"  # 'sarvam' or 'azure'
 
 @router.post("/message")
 async def chat_message_endpoint(req: TextQueryRequest):
@@ -57,7 +57,7 @@ async def voice_chat_endpoint(
     language_code: str = Form("hi-IN"),
     user_role: str = Form("student"),
     generate_audio: bool = Form(True),
-    provider: str = Form("sarvam")
+    provider: str = Form("sarvam")  # 'sarvam' or 'azure'
 ):
     """
     Direct voice upload endpoint.
@@ -86,7 +86,7 @@ async def voice_chat_endpoint(
     
     if not transcript:
         from app.config import settings
-        from app.services.agent_service import synthesize_speech_dual
+        from app.services.agent_service import synthesize_speech_by_provider
         
         canonical_lang = settings.normalize_language_code(language_code)
         polite_msg = SILENT_SPEECH_MESSAGES.get(canonical_lang, SILENT_SPEECH_MESSAGES["hi-IN"])
@@ -94,7 +94,7 @@ async def voice_chat_endpoint(
         audio_b64 = None
         tts_telem = {}
         if generate_audio:
-            audio_b64, tts_telem = await synthesize_speech_dual(polite_msg, canonical_lang, provider)
+            audio_b64, tts_telem = await synthesize_speech_by_provider(polite_msg, canonical_lang, provider)
             
         return {
             "status": "warning",
