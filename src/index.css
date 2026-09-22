@@ -1,10 +1,10 @@
 /* ==========================================================================
    UNIVOICE — PREMIUM DARK DESIGN SYSTEM
    Colors: Deep Navy + Electric Blue + Subtle Glow
-   Font: Carlito — Clean, Modern, Professional
+   Font: Jost — Clean, Modern, Elegant
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   /* ── Base Dark Palette ── */
@@ -68,7 +68,7 @@
   --header-height: 68px;
 
   /* ── Typography ── */
-  --font-sans: 'Carlito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Jost', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', Consolas, monospace;
 }
 
@@ -125,16 +125,16 @@ a { color: var(--blue-400); text-decoration: none; }
 .navbar-header {
   position: sticky; top: 0; z-index: 100;
   height: var(--header-height);
-  background: rgba(6,9,26,0.88);
-  backdrop-filter: blur(20px) saturate(1.4);
+  background: rgba(6,9,26,0.92);
+  backdrop-filter: blur(24px) saturate(1.5);
   border-bottom: 1px solid var(--border);
-  /* Glow line at bottom */
   box-shadow: 0 1px 0 rgba(59,130,246,0.15), 0 4px 24px rgba(0,0,0,0.4);
 }
 .navbar-container {
   display: flex; align-items: center;
   justify-content: space-between;
-  height: 100%; gap: 1rem;
+  height: 100%; gap: 1.5rem;
+  padding: 0 1.5rem;
 }
 
 /* Logo */
@@ -168,14 +168,14 @@ a { color: var(--blue-400); text-decoration: none; }
 
 /* Nav Pills */
 .nav-pills {
-  display: flex; align-items: center; gap: 1px;
-  background: rgba(255,255,255,0.04);
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
   border-radius: 12px; padding: 4px;
 }
 .nav-pill-btn {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: 9px;
+  padding: 7px 14px; border-radius: 9px;
   border: none; background: transparent;
   color: var(--text-secondary);
   font-size: 0.8125rem; font-weight: 500;
@@ -196,7 +196,7 @@ a { color: var(--blue-400); text-decoration: none; }
   border: 1px solid rgba(59,130,246,0.3);
 }
 .navbar-right {
-  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
 }
 
 /* ══════════════════════════════════════════

@@ -2,6 +2,7 @@ import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { AuthModal } from './components/common/AuthModal';
 import { AboutPage } from './pages/AboutPage';
 import { AssistantPage } from './pages/AssistantPage';
 import { ArchitecturePage } from './pages/ArchitecturePage';
@@ -35,6 +36,7 @@ export function App() {
         <Navbar />
         <AppRouter />
         <Footer />
+        <AuthModal />
       </div>
     </AppProvider>
   );

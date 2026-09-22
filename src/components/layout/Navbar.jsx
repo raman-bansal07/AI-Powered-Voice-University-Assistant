@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { INDIAN_LANGUAGES } from '../../data/indianLanguages';
 import {
-  Bot, Layers, Cpu, Users, Globe, UserCheck,
-  Menu, X, ChevronDown, LayoutDashboard,
+  Bot, Layers, Cpu, Users, Globe,
+  Menu, X, ChevronDown, LayoutDashboard, ShieldCheck,
 } from 'lucide-react';
 
 // ── Custom logo SVG ──────────────────────────────────────────────
@@ -24,17 +24,24 @@ const LogoMark = ({ size = 22 }) => (
 );
 
 export const Navbar = () => {
-  const { currentRoute, navigateTo, selectedLanguage, setSelectedLanguageCode, userRole, setUserRole } = useApp();
+  const {
+    currentRoute,
+    navigateTo,
+    selectedLanguage,
+    setSelectedLanguageCode,
+    user,
+    quotaInfo,
+    openAuthModal,
+    logoutUser
+  } = useApp();
+
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
-  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const langRef = useRef(null);
-  const roleRef = useRef(null);
 
   useEffect(() => {
     const handler = (e) => {
       if (langRef.current && !langRef.current.contains(e.target)) setIsLangMenuOpen(false);
-      if (roleRef.current && !roleRef.current.contains(e.target)) setIsRoleMenuOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -46,7 +53,7 @@ export const Navbar = () => {
     { route: 'architecture', label: 'Architecture',   icon: <Layers size={13} /> },
     { route: 'technology',   label: 'Azure Stack',    icon: <Cpu size={13} /> },
     { route: 'team',         label: 'Team',           icon: <Users size={13} /> },
-    { route: 'admin',        label: 'Admin',          icon: <UserCheck size={13} /> },
+    { route: 'admin',        label: 'Admin',          icon: <ShieldCheck size={13} /> },
   ];
 
   const dropdownStyle = {
@@ -70,13 +77,11 @@ export const Navbar = () => {
       <div className="container navbar-container">
 
         {/* ── Brand / Logo ─────────────────────────────── */}
-        <div className="navbar-brand" onClick={() => navigateTo('about')}>
-          {/* Logo container with glow */}
+        <div className="navbar-brand" onClick={() => navigateTo('about')} style={{ cursor: 'pointer' }}>
           <div style={{ position: 'relative' }}>
             <div className="brand-icon">
               <LogoMark size={22} />
             </div>
-            {/* Glow behind icon */}
             <div style={{
               position: 'absolute', inset: -4,
               background: 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, transparent 70%)',
@@ -89,7 +94,6 @@ export const Navbar = () => {
             <span className="brand-sub">Azure AI · Multilingual</span>
           </div>
 
-          {/* Azure badge pill */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 4,
             background: 'rgba(37,99,235,0.15)',
@@ -118,13 +122,70 @@ export const Navbar = () => {
         </nav>
 
         {/* ── Right Controls ────────────────────────────── */}
-        <div className="navbar-right">
+        <div className="navbar-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+          {/* User Auth Profile Badge or Sign In Trigger */}
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px 12px',
+                background: user.role === 'student' ? 'rgba(37, 99, 235, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                border: user.role === 'student' ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)',
+                borderRadius: '20px',
+                fontSize: '0.8rem'
+              }}>
+                <span>{user.role === 'student' ? '🎓' : '🌐'}</span>
+                <span style={{ fontWeight: 600, color: '#f1f5f9' }}>{user.name}</span>
+                <span style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  color: quotaInfo.remaining_today > 0 ? '#38bdf8' : '#f87171',
+                  fontWeight: 700,
+                  fontSize: '0.75rem'
+                }}>
+                  ⚡ {quotaInfo.remaining_today}/{quotaInfo.daily_limit}
+                </span>
+              </div>
+              <button
+                onClick={logoutUser}
+                title="Log Out"
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '5px 10px', fontSize: '0.75rem', color: '#94a3b8' }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={openAuthModal}
+              className="btn btn-primary btn-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                border: 'none',
+                boxShadow: '0 0 15px rgba(37, 99, 235, 0.4)',
+                fontWeight: 600,
+                fontSize: '0.8125rem',
+                cursor: 'pointer'
+              }}
+            >
+              <span>🔑</span>
+              <span>Sign In / Register</span>
+            </button>
+          )}
 
           {/* Language picker */}
           <div ref={langRef} style={{ position: 'relative' }}>
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => { setIsLangMenuOpen(!isLangMenuOpen); setIsRoleMenuOpen(false); }}
+              onClick={() => { setIsLangMenuOpen(!isLangMenuOpen); }}
               style={{ gap: 5 }}
             >
               <Globe size={13} color="#60A5FA" />
@@ -170,50 +231,6 @@ export const Navbar = () => {
             )}
           </div>
 
-          {/* Role picker */}
-          <div ref={roleRef} style={{ position: 'relative' }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => { setIsRoleMenuOpen(!isRoleMenuOpen); setIsLangMenuOpen(false); }}
-              style={{ gap: 5 }}
-            >
-              <UserCheck size={13} color="#34D399" />
-              <span style={{ textTransform: 'capitalize', fontWeight: 600, color: '#E8EEFF' }}>{userRole}</span>
-              <ChevronDown size={11} color="#4A5580" />
-            </button>
-
-            {isRoleMenuOpen && (
-              <div style={dropdownStyle}>
-                <div style={dropHeaderStyle}>User Role</div>
-                {[
-                  { role: 'student', label: 'Student',  desc: 'Full academic access' },
-                  { role: 'faculty', label: 'Faculty',  desc: 'Curriculum & departments' },
-                  { role: 'guest',   label: 'Guest',    desc: 'Public ordinances only' },
-                ].map((item) => {
-                  const isActive = userRole === item.role;
-                  return (
-                    <button
-                      key={item.role}
-                      onClick={() => { setUserRole(item.role); setIsRoleMenuOpen(false); }}
-                      style={{
-                        display: 'flex', flexDirection: 'column',
-                        width: '100%', padding: '7px 10px', borderRadius: 8,
-                        border: 'none', cursor: 'pointer', textAlign: 'left',
-                        fontFamily: 'var(--font-sans)',
-                        background: isActive ? 'rgba(52,211,153,0.1)' : 'transparent',
-                        color: isActive ? '#34D399' : '#8B9CC8',
-                        transition: 'background 0.15s',
-                      }}
-                    >
-                      <span style={{ fontSize: '0.8125rem', fontWeight: isActive ? 700 : 400 }}>{item.label}</span>
-                      <span style={{ fontSize: '0.7rem', color: '#4A5580' }}>{item.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
           {/* Mobile toggle */}
           <button
             className="btn btn-secondary btn-sm mobile-menu-btn"
@@ -224,6 +241,7 @@ export const Navbar = () => {
           </button>
         </div>
       </div>
+
 
       {/* ── Mobile Menu ──────────────────────────────── */}
       {isMobileMenuOpen && (

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { INDIAN_LANGUAGES } from '../../data/indianLanguages';
 import { AudioVisualizer } from '../common/AudioVisualizer';
@@ -12,6 +12,8 @@ import {
   Sliders,
   Zap,
   Cloud,
+  Lock,
+  CheckCircle2,
 } from 'lucide-react';
 
 export const VoiceController = () => {
@@ -23,12 +25,17 @@ export const VoiceController = () => {
     triggerVoiceQuerySimulation,
     processVoiceAudio,
     resetConversation,
+    user,
+    authToken,
+    quotaInfo,
+    openAuthModal,
   } = useApp();
 
   const [inputText, setInputText] = useState('');
   const [inputMode, setInputMode] = useState('voice');
   const [isRecording, setIsRecording] = useState(false);
   const [micError, setMicError] = useState(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   // Provider Modal state
   const [showProviderModal, setShowProviderModal] = useState(false);
@@ -37,8 +44,47 @@ export const VoiceController = () => {
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+
+  // Auto-stop recording after 10 seconds to protect STT credits
+  useEffect(() => {
+    if (isRecording) {
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => {
+          if (prev >= 10) {
+            // Auto stop at 10s
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+              mediaRecorderRef.current.stop();
+              setIsRecording(false);
+            }
+            clearInterval(recordingTimerRef.current);
+            return 10;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } else {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    }
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+  }, [isRecording]);
 
   const handleMicClick = async () => {
+    // Gatekeep unauthenticated users
+    if (!authToken || !user) {
+      openAuthModal();
+      return;
+    }
+
+    // Check if daily quota exhausted
+    if (quotaInfo.remaining_today <= 0) {
+      setMicError(`Daily query limit reached (${quotaInfo.daily_limit} queries). Quota resets in 24 hours.`);
+      return;
+    }
+
     // If already recording → stop
     if (isRecording) {
       mediaRecorderRef.current?.stop();
@@ -79,7 +125,7 @@ export const VoiceController = () => {
         setPendingAudioBlob(audioBlob);
         setSelectedProvider(null);
         setShowProviderModal(true);
-        setVoiceState('idle'); // reset while modal is open
+        setVoiceState('idle');
       };
 
       recorder.start();
@@ -112,6 +158,14 @@ export const VoiceController = () => {
 
   const handleTextSubmit = (e) => {
     e.preventDefault();
+    if (!authToken || !user) {
+      openAuthModal();
+      return;
+    }
+    if (quotaInfo.remaining_today <= 0) {
+      setMicError(`Daily query limit reached (${quotaInfo.daily_limit} queries). Quota resets in 24 hours.`);
+      return;
+    }
     if (!inputText.trim()) return;
     triggerVoiceQuerySimulation(inputText);
     setInputText('');
@@ -122,7 +176,7 @@ export const VoiceController = () => {
   // Mic button color
   const micBg =
     isRecording
-      ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'  // red = recording
+      ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
       : voiceState === 'transcribing'
       ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
       : voiceState === 'reasoning'
@@ -133,7 +187,7 @@ export const VoiceController = () => {
 
   // Status label
   const statusLabel = isRecording
-    ? `Recording ${selectedLanguage.name}... Click mic to stop`
+    ? `Recording (${recordingSeconds}s / 10s max) · Click to send`
     : voiceState === 'transcribing'
     ? 'Transcribing with Sarvam saaras:v3...'
     : voiceState === 'reasoning'
@@ -156,6 +210,79 @@ export const VoiceController = () => {
         position: 'relative',
       }}
     >
+      {/* Top Identity & Quota Status Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 16px',
+          marginBottom: '1.25rem',
+          borderRadius: '12px',
+          background: user
+            ? user.role === 'student'
+              ? 'rgba(37, 99, 235, 0.1)'
+              : 'rgba(16, 185, 129, 0.1)'
+            : 'rgba(239, 68, 68, 0.1)',
+          border: user
+            ? user.role === 'student'
+              ? '1px solid rgba(59, 130, 246, 0.3)'
+              : '1px solid rgba(16, 185, 129, 0.3)'
+            : '1px solid rgba(239, 68, 68, 0.3)',
+        }}
+      >
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={16} color={user.role === 'student' ? '#60a5fa' : '#34d399'} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9' }}>
+              {user.role === 'student' ? '🎓 Chitkara Student Identity Verified' : '🌐 Verified Campus Visitor Pass'}
+            </span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Lock size={16} color="#f87171" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fca5a5' }}>
+              🔒 Authentication Required: Please Sign In to interact with Voice AI
+            </span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {user ? (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 10px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: quotaInfo.remaining_today > 0 ? '#38bdf8' : '#f87171'
+            }}>
+              <span>⚡ Quota Left:</span>
+              <span>{quotaInfo.remaining_today} / {quotaInfo.daily_limit} Queries Today</span>
+            </div>
+          ) : (
+            <button
+              onClick={openAuthModal}
+              style={{
+                padding: '4px 12px',
+                borderRadius: '6px',
+                backgroundColor: '#2563eb',
+                border: 'none',
+                color: '#fff',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Sign In / OTP
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Top Header */}
       <div
         style={{
@@ -313,10 +440,12 @@ export const VoiceController = () => {
           <div style={{ textAlign: 'center', maxWidth: '460px' }}>
             <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
               {isRecording
-                ? `Recording in ${selectedLanguage.name} — Click mic to stop & send`
+                ? `Recording in ${selectedLanguage.name} (${recordingSeconds}s / 10s) — Click mic to stop & send`
                 : voiceState !== 'idle'
                 ? `Processing ${selectedLanguage.name} Voice Stream...`
-                : `Tap Mic to ask in ${selectedLanguage.name}`}
+                : user
+                ? `Tap Mic to ask in ${selectedLanguage.name}`
+                : `🔒 Sign In with Email to activate Voice Mic`}
             </div>
             {!isRecording && voiceState === 'idle' && (
               <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
@@ -332,9 +461,9 @@ export const VoiceController = () => {
                 marginTop: '1rem',
                 padding: '0.75rem 1rem',
                 borderRadius: '8px',
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
-                color: '#DC2626',
+                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#f87171',
                 fontSize: '0.8125rem',
                 maxWidth: '400px',
                 textAlign: 'center',
@@ -352,7 +481,7 @@ export const VoiceController = () => {
             className="input"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={`Ask about exam dates, attendance rules, or ordinances in ${selectedLanguage.name}...`}
+            placeholder={user ? `Ask about exam dates, attendance rules, or ordinances in ${selectedLanguage.name}...` : 'Please sign in to ask questions...'}
             disabled={isInteracting}
             style={{ flex: 1, padding: '0.75rem 1rem' }}
           />
@@ -414,7 +543,7 @@ export const VoiceController = () => {
               </h3>
               <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                 Select which AI will respond to your voice query.
-                <br />Your speech has been captured successfully!
+                <br />Speech recorded ({recordingSeconds}s) successfully!
               </p>
             </div>
 

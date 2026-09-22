@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 
-from app.routers import chat, voice, tools, admin
+from app.routers import chat, voice, tools, admin, auth
 from app.config import settings
 
 # Configure structured logging
@@ -60,6 +60,7 @@ async def on_startup():
         logger.warning(f"Bootstrap PDF indexing error (non-fatal): {e}")
 
 # Include API Routers
+app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(voice.router)
 app.include_router(tools.router)

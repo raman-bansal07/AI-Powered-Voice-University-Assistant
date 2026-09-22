@@ -144,6 +144,106 @@ function BarChart({ data, color = C.purple }) {
   return <canvas ref={canvasRef} width={500} height={180} style={{ width: '100%', height: 180 }} />;
 }
 
+// ─── Multi-Service Line Chart ───
+const SVC_COLORS = {
+  queries:          '#0078D4',
+  sarvam_stt:       '#8B5CF6',
+  sarvam_tts:       '#A78BFA',
+  azure_speech_tts: '#10B981',
+  azure_openai:     '#F59E0B',
+  azure_search:     '#EF4444',
+};
+const SVC_LABELS = {
+  queries:          'Queries',
+  sarvam_stt:       'Sarvam STT',
+  sarvam_tts:       'Sarvam TTS',
+  azure_speech_tts: 'Azure Speech',
+  azure_openai:     'Azure OpenAI',
+  azure_search:     'Azure Search',
+};
+
+function MultiLineChart({ rows }) {
+  const canvasRef = useRef(null);
+  const keys = ['queries', 'sarvam_stt', 'sarvam_tts', 'azure_speech_tts', 'azure_openai', 'azure_search'];
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !rows || rows.length === 0) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 14, right: 16, bottom: 30, left: 36 };
+    ctx.clearRect(0, 0, W, H);
+
+    // Use last 30 days max for readability
+    const data = [...rows].reverse().slice(-30);
+    const allVals = data.flatMap(r => keys.map(k => r[k] || 0));
+    const maxV = Math.max(...allVals, 1);
+    const xStep = (W - pad.left - pad.right) / Math.max(data.length - 1, 1);
+    const yScale = (H - pad.top - pad.bottom) / maxV;
+    const x = (i) => pad.left + i * xStep;
+    const y = (v) => H - pad.bottom - v * yScale;
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const yy = pad.top + ((H - pad.top - pad.bottom) / 4) * i;
+      ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(W - pad.right, yy); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.font = '9px Inter, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(Math.round(maxV - (maxV / 4) * i), pad.left - 4, yy + 3);
+    }
+
+    // Lines
+    keys.forEach(key => {
+      const color = SVC_COLORS[key];
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      data.forEach((row, i) => {
+        const v = row[key] || 0;
+        i === 0 ? ctx.moveTo(x(i), y(v)) : ctx.lineTo(x(i), y(v));
+      });
+      ctx.stroke();
+      // Dots
+      data.forEach((row, i) => {
+        const v = row[key] || 0;
+        ctx.beginPath();
+        ctx.arc(x(i), y(v), 3, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+    });
+
+    // X-axis date labels (every ~5 ticks)
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    data.forEach((row, i) => {
+      if (i % Math.max(1, Math.floor(data.length / 7)) === 0 || i === data.length - 1) {
+        ctx.fillText(row.date.slice(5), x(i), H - 8);
+      }
+    });
+  }, [rows]);
+
+  return (
+    <div>
+      <canvas ref={canvasRef} width={760} height={180} style={{ width: '100%', height: 180 }} />
+      {/* Legend */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem 1.25rem', marginTop: '0.75rem' }}>
+        {keys.map(k => (
+          <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: C.textSecondary }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: SVC_COLORS[k], display: 'inline-block' }} />
+            {SVC_LABELS[k]}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Status Badge ───
 function StatusBadge({ status }) {
   const colors = {
@@ -285,6 +385,8 @@ function LoginPage({ onLogin }) {
 function Dashboard({ token, onLogout }) {
   const [stats, setStats] = useState(null);
   const [health, setHealth] = useState(null);
+  const [breakdown, setBreakdown] = useState(null);
+  const [usersData, setUsersData] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -305,10 +407,26 @@ function Dashboard({ token, onLogout }) {
     } catch { }
   };
 
+  const fetchBreakdown = async () => {
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/admin/daily-breakdown`, { headers: authHeaders });
+      if (r.ok) setBreakdown(await r.json());
+    } catch { }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/admin/users`, { headers: authHeaders });
+      if (r.ok) setUsersData(await r.json());
+    } catch { }
+  };
+
   useEffect(() => {
     fetchStats();
     fetchHealth();
-    const interval = setInterval(fetchStats, 30000);
+    fetchBreakdown();
+    fetchUsers();
+    const interval = setInterval(() => { fetchStats(); fetchBreakdown(); fetchUsers(); }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -449,6 +567,111 @@ function Dashboard({ token, onLogout }) {
             </div>
         </div>
 
+        {/* ── DATE-WISE BREAKDOWN SECTION ── */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div>
+              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1.1rem' }}>📊 Date-wise Usage Breakdown</div>
+              <div style={{ color: C.textMuted, fontSize: '0.82rem', marginTop: 4 }}>
+                All recorded days — queries and service calls per day. Data persists across restarts.
+              </div>
+            </div>
+            <button onClick={fetchBreakdown} style={{
+              background: 'rgba(0,120,212,0.15)', border: '1px solid rgba(0,120,212,0.3)',
+              color: C.blue, padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+              fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
+            }}>🔄 Refresh</button>
+          </div>
+
+          {/* Multi-service line chart over all recorded dates */}
+          <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '0.95rem', marginBottom: '1rem' }}>
+              📈 All Services — Daily Trend
+            </div>
+            {breakdown?.rows?.length > 0
+              ? <MultiLineChart rows={breakdown.rows} />
+              : <div style={{ color: C.textMuted, textAlign: 'center', padding: '2rem' }}>No data yet. Use the assistant to start generating stats.</div>
+            }
+          </div>
+
+          {/* Date-wise table */}
+          <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${C.cardBorder}` }}>
+                    {['Date', 'Queries', 'Sarvam STT', 'Sarvam TTS', 'Azure Speech', 'Azure OpenAI', 'Azure Search', 'Total Calls'].map(h => (
+                      <th key={h} style={{
+                        padding: '0.85rem 1.1rem', textAlign: 'left',
+                        color: C.textMuted, fontWeight: 700, fontSize: '0.72rem',
+                        textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap',
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {breakdown?.rows?.length > 0
+                    ? breakdown.rows.map((row, i) => {
+                        const totalCalls = (row.sarvam_stt || 0) + (row.sarvam_tts || 0) +
+                          (row.azure_speech_tts || 0) + (row.azure_openai || 0) + (row.azure_search || 0);
+                        const isToday = row.date === new Date().toISOString().slice(0, 10);
+                        return (
+                          <tr key={row.date} style={{
+                            borderBottom: `1px solid ${C.cardBorder}`,
+                            background: isToday ? 'rgba(0,120,212,0.06)' : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
+                            transition: 'background 0.15s',
+                          }}>
+                            <td style={{ padding: '0.85rem 1.1rem', whiteSpace: 'nowrap' }}>
+                              <span style={{ color: C.textPrimary, fontWeight: isToday ? 700 : 500 }}>{row.date}</span>
+                              {isToday && (
+                                <span style={{ marginLeft: 8, background: 'rgba(0,120,212,0.2)', color: C.blue, fontSize: '0.68rem', padding: '2px 7px', borderRadius: 10, fontWeight: 700 }}>
+                                  TODAY
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: C.blue, fontWeight: 700 }}>{row.queries || 0}</td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: SVC_COLORS.sarvam_stt }}>{row.sarvam_stt || 0}</td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: SVC_COLORS.sarvam_tts }}>{row.sarvam_tts || 0}</td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: SVC_COLORS.azure_speech_tts }}>{row.azure_speech_tts || 0}</td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: SVC_COLORS.azure_openai }}>{row.azure_openai || 0}</td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: SVC_COLORS.azure_search }}>{row.azure_search || 0}</td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: C.textSecondary, fontWeight: 600 }}>{totalCalls}</td>
+                          </tr>
+                        );
+                      })
+                    : (
+                      <tr>
+                        <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: C.textMuted }}>
+                          No daily data recorded yet.
+                        </td>
+                      </tr>
+                    )
+                  }
+                </tbody>
+                {breakdown?.rows?.length > 0 && (
+                  <tfoot>
+                    <tr style={{ background: 'rgba(255,255,255,0.04)', borderTop: `1px solid ${C.cardBorder}` }}>
+                      <td style={{ padding: '0.85rem 1.1rem', color: C.textMuted, fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase' }}>
+                        {breakdown.total_days} day{breakdown.total_days !== 1 ? 's' : ''} total
+                      </td>
+                      {['queries','sarvam_stt','sarvam_tts','azure_speech_tts','azure_openai','azure_search'].map(k => (
+                        <td key={k} style={{ padding: '0.85rem 1.1rem', color: C.textSecondary, fontWeight: 700 }}>
+                          {breakdown.rows.reduce((s, r) => s + (r[k] || 0), 0)}
+                        </td>
+                      ))}
+                      <td style={{ padding: '0.85rem 1.1rem', color: C.textSecondary, fontWeight: 700 }}>
+                        {breakdown.rows.reduce((s, r) =>
+                          s + (r.sarvam_stt||0) + (r.sarvam_tts||0) + (r.azure_speech_tts||0) + (r.azure_openai||0) + (r.azure_search||0), 0
+                        )}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+        </div>
+
         {/* ── PDF MANAGER SECTION ── */}
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -512,7 +735,96 @@ function Dashboard({ token, onLogout }) {
                   </div>
                 )}
             </div>
+        {/* ── REGISTERED USERS SECTION ── */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div>
+              <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1.1rem' }}>👥 Registered Users & Audit</div>
+              <div style={{ color: C.textMuted, fontSize: '0.82rem', marginTop: 4 }}>
+                Monitor all registered students and visitors. Flags users with high malicious/out-of-scope query counts.
+              </div>
+            </div>
+            <button onClick={fetchUsers} style={{
+              background: 'rgba(0,120,212,0.15)', border: '1px solid rgba(0,120,212,0.3)',
+              color: C.blue, padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+              fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
+            }}>🔄 Refresh Users</button>
+          </div>
+
+          <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${C.cardBorder}` }}>
+                    {['Name', 'Email', 'Role', 'Roll No. (Student)', 'Quota', 'Queries (Today / All Time)', 'Malicious Flags'].map(h => (
+                      <th key={h} style={{
+                        padding: '0.85rem 1.1rem', textAlign: 'left',
+                        color: C.textMuted, fontWeight: 700, fontSize: '0.72rem',
+                        textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap',
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersData?.users && usersData.users.length > 0
+                    ? usersData.users.map((u, i) => (
+                      <tr key={i} style={{ borderBottom: i === usersData.users.length - 1 ? 'none' : `1px solid ${C.cardBorder}`, background: u.malicious_query_count > 5 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+                        <td style={{ padding: '0.85rem 1.1rem', color: C.textPrimary, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {u.name}
+                        </td>
+                        <td style={{ padding: '0.85rem 1.1rem', color: C.textSecondary, whiteSpace: 'nowrap' }}>
+                          {u.email}
+                        </td>
+                        <td style={{ padding: '0.85rem 1.1rem', whiteSpace: 'nowrap' }}>
+                          {u.role === 'student'
+                            ? <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA', padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700 }}>🎓 Student</span>
+                            : <span style={{ background: 'rgba(156,163,175,0.15)', color: '#9CA3AF', padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700 }}>🌐 Visitor</span>
+                          }
+                        </td>
+                        <td style={{ padding: '0.85rem 1.1rem', color: C.textPrimary, fontWeight: 500 }}>
+                          {u.role === 'student' && u.roll_number ? (
+                            <span><span style={{ color: C.textMuted }}>Roll:</span> {u.roll_number} {u.branch && <span style={{ fontSize: '0.72rem', color: C.textMuted, marginLeft: 4 }}>({u.branch})</span>}</span>
+                          ) : (
+                            <span style={{ color: C.textMuted }}>-</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.85rem 1.1rem', color: C.textSecondary }}>
+                          {u.daily_limit} / day
+                        </td>
+                        <td style={{ padding: '0.85rem 1.1rem' }}>
+                          <span style={{ color: u.queries_used_today >= u.daily_limit ? C.red : C.textPrimary, fontWeight: 600 }}>{u.queries_used_today}</span>
+                          <span style={{ color: C.textMuted }}> / {u.total_queries_all_time}</span>
+                        </td>
+                        <td style={{ padding: '0.85rem 1.1rem' }}>
+                          {u.malicious_query_count > 0 ? (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              background: u.malicious_query_count > 5 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.15)',
+                              color: u.malicious_query_count > 5 ? '#FCA5A5' : '#FCD34D',
+                              padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700,
+                            }}>
+                              <span>⚠️</span> {u.malicious_query_count}
+                            </span>
+                          ) : (
+                            <span style={{ color: C.textMuted }}>0</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                    : (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: C.textMuted }}>
+                          No users registered yet.
+                        </td>
+                      </tr>
+                    )
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   );
