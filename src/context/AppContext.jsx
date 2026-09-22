@@ -5,7 +5,11 @@ import { INITIAL_CONVERSATION } from '../data/mockConversations';
 const AppContext = createContext(undefined);
 
 export const AppProvider = ({ children }) => {
-  const [currentRoute, setCurrentRoute] = useState('about');
+  const [currentRoute, setCurrentRoute] = useState(() => {
+    const hash = window.location.hash.replace('#/', '').replace('#', '');
+    const validRoutes = ['about', 'assistant', 'architecture', 'knowledge', 'technology', 'security', 'team', 'admin'];
+    return validRoutes.includes(hash) ? hash : 'about';
+  });
   const [selectedLanguage, setSelectedLanguage] = useState(INDIAN_LANGUAGES[0]);
   const [voiceState, setVoiceState] = useState('idle');
   const [userRole, setUserRole] = useState('student');

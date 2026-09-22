@@ -135,6 +135,7 @@ export const AuthModal = () => {
 
       // Successful registration
       registerUserWithOtp(data.token, data.user);
+      resetState();
       closeAuthModal();
     } catch (err) {
       setErrorMessage(err.message || 'OTP verification failed.');
@@ -168,6 +169,7 @@ export const AuthModal = () => {
       }
 
       loginUser(data.token, data.user);
+      resetState();
       closeAuthModal();
     } catch (err) {
       setErrorMessage(err.message || 'Login failed.');
@@ -178,6 +180,9 @@ export const AuthModal = () => {
 
   const resetState = () => {
     setStep('form');
+    setName('');
+    setEmail('');
+    setPassword('');
     setOtp('');
     setErrorMessage('');
     setSuccessMessage('');

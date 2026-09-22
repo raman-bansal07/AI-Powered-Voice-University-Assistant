@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const BACKEND_URL = 'http://localhost:8000';
+const BACKEND_URL = '';
 const ADMIN_TOKEN_KEY = 'univoice_admin_token';
 
 // ─── Color palette ───
@@ -304,6 +304,9 @@ function LoginPage({ onLogin }) {
       const data = await resp.json();
       if (resp.ok && data.token) {
         localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+        setEmail('');
+        setPassword('');
+        setError('');
         onLogin(data.token);
       } else {
         setError(data.detail || 'Invalid credentials');
@@ -375,6 +378,28 @@ function LoginPage({ onLogin }) {
           >
             {loading ? 'Signing in…' : 'Sign In to Dashboard'}
           </button>
+
+          <div style={{
+            marginTop: '1.25rem', padding: '10px 14px', borderRadius: 10,
+            background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem',
+          }}>
+            <div>
+              <span style={{ color: C.textMuted }}>Default: </span>
+              <strong style={{ color: '#60A5FA' }}>admin@gmail.com</strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setEmail('admin@gmail.com'); setPassword('admin123'); setError(''); }}
+              style={{
+                background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)',
+                color: '#93C5FD', padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+                fontSize: '0.72rem', fontWeight: 600, fontFamily: 'inherit',
+              }}
+            >
+              Fill Credentials
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -387,6 +412,8 @@ function Dashboard({ token, onLogout }) {
   const [health, setHealth] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
   const [usersData, setUsersData] = useState(null);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
   const [uploadStatus, setUploadStatus] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -735,9 +762,11 @@ function Dashboard({ token, onLogout }) {
                   </div>
                 )}
             </div>
+        </div>
+
         {/* ── REGISTERED USERS SECTION ── */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <div style={{ color: C.textPrimary, fontWeight: 700, fontSize: '1.1rem' }}>👥 Registered Users & Audit</div>
               <div style={{ color: C.textMuted, fontSize: '0.82rem', marginTop: 4 }}>
@@ -747,82 +776,163 @@ function Dashboard({ token, onLogout }) {
             <button onClick={fetchUsers} style={{
               background: 'rgba(0,120,212,0.15)', border: '1px solid rgba(0,120,212,0.3)',
               color: C.blue, padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
-              fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit',
-            }}>🔄 Refresh Users</button>
+              fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span>🔄</span> Refresh Users
+            </button>
           </div>
 
-          <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${C.cardBorder}` }}>
-                    {['Name', 'Email', 'Role', 'Roll No. (Student)', 'Quota', 'Queries (Today / All Time)', 'Malicious Flags'].map(h => (
-                      <th key={h} style={{
-                        padding: '0.85rem 1.1rem', textAlign: 'left',
-                        color: C.textMuted, fontWeight: 700, fontSize: '0.72rem',
-                        textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap',
-                      }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {usersData?.users && usersData.users.length > 0
-                    ? usersData.users.map((u, i) => (
-                      <tr key={i} style={{ borderBottom: i === usersData.users.length - 1 ? 'none' : `1px solid ${C.cardBorder}`, background: u.malicious_query_count > 5 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
-                        <td style={{ padding: '0.85rem 1.1rem', color: C.textPrimary, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {u.name}
-                        </td>
-                        <td style={{ padding: '0.85rem 1.1rem', color: C.textSecondary, whiteSpace: 'nowrap' }}>
-                          {u.email}
-                        </td>
-                        <td style={{ padding: '0.85rem 1.1rem', whiteSpace: 'nowrap' }}>
-                          {u.role === 'student'
-                            ? <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA', padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700 }}>🎓 Student</span>
-                            : <span style={{ background: 'rgba(156,163,175,0.15)', color: '#9CA3AF', padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700 }}>🌐 Visitor</span>
-                          }
-                        </td>
-                        <td style={{ padding: '0.85rem 1.1rem', color: C.textPrimary, fontWeight: 500 }}>
-                          {u.role === 'student' && u.roll_number ? (
-                            <span><span style={{ color: C.textMuted }}>Roll:</span> {u.roll_number} {u.branch && <span style={{ fontSize: '0.72rem', color: C.textMuted, marginLeft: 4 }}>({u.branch})</span>}</span>
-                          ) : (
-                            <span style={{ color: C.textMuted }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '0.85rem 1.1rem', color: C.textSecondary }}>
-                          {u.daily_limit} / day
-                        </td>
-                        <td style={{ padding: '0.85rem 1.1rem' }}>
-                          <span style={{ color: u.queries_used_today >= u.daily_limit ? C.red : C.textPrimary, fontWeight: 600 }}>{u.queries_used_today}</span>
-                          <span style={{ color: C.textMuted }}> / {u.total_queries_all_time}</span>
-                        </td>
-                        <td style={{ padding: '0.85rem 1.1rem' }}>
-                          {u.malicious_query_count > 0 ? (
-                            <span style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                              background: u.malicious_query_count > 5 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.15)',
-                              color: u.malicious_query_count > 5 ? '#FCA5A5' : '#FCD34D',
-                              padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700,
-                            }}>
-                              <span>⚠️</span> {u.malicious_query_count}
-                            </span>
-                          ) : (
-                            <span style={{ color: C.textMuted }}>0</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                    : (
-                      <tr>
-                        <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: C.textMuted }}>
-                          No users registered yet.
-                        </td>
-                      </tr>
-                    )
-                  }
-                </tbody>
-              </table>
+          {/* Search & Filter Bar */}
+          <div style={{
+            background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16,
+            padding: '1.2rem', marginBottom: '1rem', display: 'flex', flexWrap: 'wrap',
+            gap: '1rem', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            {/* Search Input */}
+            <div style={{ position: 'relative', flex: '1 1 320px', minWidth: 260 }}>
+              <input
+                type="text"
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                placeholder="🔍 Filter by Email (e.g. @chitkara.edu.in), Name, or Roll No..."
+                style={{
+                  width: '100%', padding: '0.65rem 2.2rem 0.65rem 1rem',
+                  background: '#070B18', border: '1px solid rgba(99,120,200,0.25)',
+                  borderRadius: 10, color: C.textPrimary, fontSize: '0.85rem',
+                  outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+                }}
+              />
+              {userSearchQuery && (
+                <button
+                  onClick={() => setUserSearchQuery('')}
+                  style={{
+                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                    background: 'transparent', border: 'none', color: C.textMuted,
+                    cursor: 'pointer', fontSize: '0.9rem',
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Filter Pills */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              {[
+                { id: 'all', label: `All Users (${usersData?.total_users || (usersData?.users || []).length})` },
+                { id: 'student', label: `🎓 Students (${(usersData?.users || []).filter(u => u.role === 'student').length})` },
+                { id: 'visitor', label: `🌐 Visitors (${(usersData?.users || []).filter(u => u.role !== 'student').length})` },
+                { id: 'flagged', label: `⚠️ Flagged (${(usersData?.users || []).filter(u => u.malicious_query_count > 0).length})` },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setUserRoleFilter(tab.id)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit', border: 'none',
+                    background: userRoleFilter === tab.id ? 'linear-gradient(135deg, #0078D4, #0055A0)' : 'rgba(255,255,255,0.05)',
+                    color: userRoleFilter === tab.id ? '#FFFFFF' : C.textSecondary,
+                    boxShadow: userRoleFilter === tab.id ? '0 2px 8px rgba(0,120,212,0.4)' : 'none',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
+
+          {/* Table of Filtered Users */}
+          {(() => {
+            const q = userSearchQuery.toLowerCase().trim();
+            const filteredUsers = (usersData?.users || []).filter(u => {
+              const matchesQuery = !q || (
+                (u.email && u.email.toLowerCase().includes(q)) ||
+                (u.name && u.name.toLowerCase().includes(q)) ||
+                (u.roll_number && String(u.roll_number).toLowerCase().includes(q)) ||
+                (u.branch && u.branch.toLowerCase().includes(q))
+              );
+              if (!matchesQuery) return false;
+              if (userRoleFilter === 'student') return u.role === 'student';
+              if (userRoleFilter === 'visitor') return u.role !== 'student';
+              if (userRoleFilter === 'flagged') return u.malicious_query_count > 0;
+              return true;
+            });
+
+            return (
+              <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 16, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${C.cardBorder}` }}>
+                        {['Name', 'Email', 'Role', 'Roll No. (Student)', 'Daily Quota', 'Queries (Today / Total)', 'Malicious Flags'].map(h => (
+                          <th key={h} style={{
+                            padding: '0.85rem 1.1rem', textAlign: 'left',
+                            color: C.textMuted, fontWeight: 700, fontSize: '0.72rem',
+                            textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap',
+                          }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.length > 0
+                        ? filteredUsers.map((u, i) => (
+                          <tr key={i} style={{ borderBottom: i === filteredUsers.length - 1 ? 'none' : `1px solid ${C.cardBorder}`, background: u.malicious_query_count > 5 ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+                            <td style={{ padding: '0.85rem 1.1rem', color: C.textPrimary, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              {u.name}
+                            </td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: '#60A5FA', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                              {u.email}
+                            </td>
+                            <td style={{ padding: '0.85rem 1.1rem', whiteSpace: 'nowrap' }}>
+                              {u.role === 'student'
+                                ? <span style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA', padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700 }}>🎓 Student</span>
+                                : <span style={{ background: 'rgba(156,163,175,0.15)', color: '#9CA3AF', padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700 }}>🌐 Visitor</span>
+                              }
+                            </td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: C.textPrimary, fontWeight: 500 }}>
+                              {u.role === 'student' && u.roll_number ? (
+                                <span><span style={{ color: C.textMuted }}>Roll:</span> <strong style={{ color: '#F8FAFC' }}>{u.roll_number}</strong> {u.branch && <span style={{ fontSize: '0.72rem', color: C.textMuted, marginLeft: 4 }}>({u.branch})</span>}</span>
+                              ) : (
+                                <span style={{ color: C.textMuted }}>-</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '0.85rem 1.1rem', color: C.textSecondary }}>
+                              {u.daily_limit} / day
+                            </td>
+                            <td style={{ padding: '0.85rem 1.1rem' }}>
+                              <span style={{ color: u.queries_used_today >= u.daily_limit ? C.red : C.textPrimary, fontWeight: 600 }}>{u.queries_used_today}</span>
+                              <span style={{ color: C.textMuted }}> / {u.total_queries_all_time}</span>
+                            </td>
+                            <td style={{ padding: '0.85rem 1.1rem' }}>
+                              {u.malicious_query_count > 0 ? (
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                                  background: u.malicious_query_count > 5 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.15)',
+                                  color: u.malicious_query_count > 5 ? '#FCA5A5' : '#FCD34D',
+                                  padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700,
+                                }}>
+                                  <span>⚠️</span> {u.malicious_query_count}
+                                </span>
+                              ) : (
+                                <span style={{ color: C.textMuted }}>0</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                        : (
+                          <tr>
+                            <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: C.textMuted }}>
+                              {userSearchQuery ? `No users matching "${userSearchQuery}"` : 'No registered users found.'}
+                            </td>
+                          </tr>
+                        )
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
       </div>
@@ -834,8 +944,14 @@ function Dashboard({ token, onLogout }) {
 export const AdminPage = () => {
   const [token, setToken] = useState(() => localStorage.getItem(ADMIN_TOKEN_KEY));
 
-  const handleLogin = (t) => setToken(t);
-  const handleLogout = () => { localStorage.removeItem(ADMIN_TOKEN_KEY); setToken(null); };
+  const handleLogin = (t) => {
+    localStorage.setItem(ADMIN_TOKEN_KEY, t);
+    setToken(t);
+  };
+  const handleLogout = () => {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+    setToken(null);
+  };
 
   if (!token) return <LoginPage onLogin={handleLogin} />;
   return <Dashboard token={token} onLogout={handleLogout} />;
