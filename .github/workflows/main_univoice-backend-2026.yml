@@ -74,4 +74,5 @@ jobs:
         with:
           app-name: 'univoice-backend-2026'
           slot-name: 'Production'
+          package: 'backend'
           
