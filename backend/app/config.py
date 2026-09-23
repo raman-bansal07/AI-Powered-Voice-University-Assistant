@@ -31,13 +31,14 @@ class Settings(BaseSettings):
     BACKEND_HOST: str = os.getenv("BACKEND_HOST", "0.0.0.0")
     BACKEND_PORT: int = int(os.getenv("BACKEND_PORT", "8000"))
 
-    # Email OTP (SMTP & Azure)
+    # Email OTP (SMTP & Resend & Azure)
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "noreply@univoice-assistant.com")
     SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "UniVoice Assistant")
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     
     # JWT Auth & Daily Quotas
     JWT_SECRET: str = os.getenv("JWT_SECRET", "univoice-chitkara-secure-jwt-key-2026-auth-shield")
