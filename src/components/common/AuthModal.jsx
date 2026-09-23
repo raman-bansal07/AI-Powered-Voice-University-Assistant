@@ -84,7 +84,8 @@ export const AuthModal = () => {
     setSuccessMessage('');
 
     try {
-      const resp = await fetch('/api/auth/send-otp', {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+      const resp = await fetch(`${BACKEND_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +120,8 @@ export const AuthModal = () => {
     setLoading(true);
     setErrorMessage('');
     try {
-      const resp = await fetch('/api/auth/verify-otp', {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+      const resp = await fetch(`${BACKEND_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,7 +156,8 @@ export const AuthModal = () => {
     setLoading(true);
     setErrorMessage('');
     try {
-      const resp = await fetch('/api/auth/login', {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+      const resp = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

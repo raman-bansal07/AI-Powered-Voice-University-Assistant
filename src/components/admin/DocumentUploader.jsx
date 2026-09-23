@@ -30,7 +30,8 @@ export const DocumentUploader = () => {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/documents/upload`, {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${BACKEND_URL}/api/documents/upload`, {
         method: 'POST',
         body: formData,
       });

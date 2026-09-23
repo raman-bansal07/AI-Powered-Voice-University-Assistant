@@ -43,7 +43,7 @@ export const AppProvider = ({ children }) => {
     role: 'visitor'
   });
 
-  const BACKEND_URL = ''; // Vite proxy forwards /api -> http://localhost:8000
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || ''; // Vite proxy forwards /api -> http://localhost:8000
 
   // Sync user profile on mount / token change
   useEffect(() => {
