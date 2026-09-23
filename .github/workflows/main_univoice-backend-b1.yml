@@ -76,6 +76,5 @@ jobs:
         with:
           app-name: 'univoice-backend-b1'
           slot-name: 'Production'
-          package: 'backend'
           startup-command: 'python -m uvicorn app.main:app --host 0.0.0.0'
           
