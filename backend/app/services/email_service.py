@@ -112,10 +112,8 @@ def _generate_otp_html(otp: str, recipient_name: str, is_student: bool) -> str:
 """
 
 
-import httpx
-
 def _send_smtp_sync(recipient_email: str, recipient_name: str, otp: str, is_student: bool) -> Tuple[bool, str]:
-    """Fallback synchronous SMTP email dispatcher (not used on Render)."""
+    """Synchronous SMTP email dispatcher."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning(f"[DEV FALLBACK] SMTP not configured. OTP for {recipient_email}: [{otp}]")
         return True, "DEV_CONSOLE"
@@ -125,6 +123,7 @@ def _send_smtp_sync(recipient_email: str, recipient_name: str, otp: str, is_stud
     msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_USER}>"
     msg["To"] = recipient_email
 
+    # Plain text alternative
     text_content = (
         f"Hello {recipient_name},\n\n"
         f"Your UniVoice verification code is: {otp}\n\n"
@@ -155,38 +154,6 @@ def _send_smtp_sync(recipient_email: str, recipient_name: str, otp: str, is_stud
 async def send_otp_email(recipient_email: str, recipient_name: str, otp: str, is_student: bool = False) -> Tuple[bool, str]:
     """
     Asynchronously dispatches an OTP email to the user.
-    Uses Resend API if configured, otherwise falls back to SMTP (which is blocked by Render).
+    Runs SMTP network call in a separate background thread pool to avoid blocking FastAPI event loop.
     """
-    if settings.RESEND_API_KEY:
-        try:
-            html_content = _generate_otp_html(otp, recipient_name, is_student)
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://api.resend.com/emails",
-                    headers={
-                        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        # NOTE: Free Resend accounts can only send from onboarding@resend.dev, 
-                        # OR a verified domain. Assuming free tier onboarding domain for now,
-                        # but sending TO the verified email address.
-                        # Wait, onboarding@resend.dev can ONLY send to the email address registered with Resend.
-                        # Since this is a test, this will work for their own email, but not others unless domain is verified.
-                        "from": "onboarding@resend.dev",
-                        "to": recipient_email,
-                        "subject": f"UniVoice Verification Code: {otp} (Chitkara University)",
-                        "html": html_content
-                    },
-                    timeout=10.0
-                )
-                response.raise_for_status()
-                logger.info(f"Successfully sent OTP email via Resend to {recipient_email}")
-                return True, "SENT"
-        except Exception as e:
-            logger.error(f"Failed to send email to {recipient_email} via Resend: {e}")
-            logger.info(f"[CONSOLE OTP FALLBACK] {recipient_email} -> {otp}")
-            return False, str(e)
-            
-    # Fallback to standard SMTP if Resend is not configured
     return await asyncio.to_thread(_send_smtp_sync, recipient_email, recipient_name, otp, is_student)
