@@ -314,7 +314,7 @@ VISITOR_DAILY_QUOTA=5
 **Department of Computer Science & Engineering**  
 *Chitkara University | Capstone Project 2025–2026*
 
-- **Raman Deep Bansal**
+- **Ramandeep Bansal**
 - **Satyam Chhabra**
 - **Sukritti Singla**
 - **Simran**
